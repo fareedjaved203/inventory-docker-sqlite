@@ -1,0 +1,468 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
+import axios from 'axios';
+import { z } from 'zod';
+import DeleteModal from '../components/DeleteModal';
+import TableSkeleton from '../components/TableSkeleton';
+import { debounce } from 'lodash';
+import { formatPakistaniCurrency } from '../utils/formatCurrency';
+import { FaSearch, FaBoxOpen, FaTag, FaDollarSign, FaWarehouse } from 'react-icons/fa';
+
+const productSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  description: z.string(),
+  price: z.number().positive("Price must be positive"),
+  sku: z.string().min(1, "SKU is required"),
+  quantity: z.number().int().min(0, "Quantity must be non-negative"),
+});
+
+function Products() {
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const searchInputRef = useRef(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [showLowStock, setShowLowStock] = useState(location.state?.showLowStock || false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    sku: '',
+    quantity: '',
+  });
+
+  // Reset page when switching between all products and low stock
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [showLowStock]);
+
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setDebouncedSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    debouncedSearch(e.target.value);
+  };
+
+  const { data: products, isLoading } = useQuery(
+    ['products', debouncedSearchTerm, currentPage, showLowStock],
+    async () => {
+      const endpoint = showLowStock ? '/api/products/low-stock' : '/api/products';
+      const searchParam = !showLowStock ? `&search=${debouncedSearchTerm}` : '';
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}${endpoint}?page=${currentPage}&limit=${itemsPerPage}${searchParam}`
+      );
+      return response.data;
+    }
+  );
+
+    // Maintain search input focus
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [products]);
+
+  const updateProduct = useMutation(
+    async (updatedProduct) => {
+      const response = await axios.put(
+        `${import.meta.env.VITE_API_URL}/api/products/${updatedProduct.id.toString()}`,
+        updatedProduct
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['products']);
+        setIsModalOpen(false);
+        setFormData({ name: '', description: '', price: '', sku: '', quantity: '' });
+        setIsEditMode(false);
+      },
+    }
+  );
+
+  const [deleteError, setDeleteError] = useState(null);
+
+  const deleteProduct = useMutation(
+    async (productId) => {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/products/${productId}`
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['products']);
+        setDeleteError(null);
+        setDeleteModalOpen(false);
+        setProductToDelete(null);
+      },
+      onError: (error) => {
+        setDeleteError(error.response?.data?.error || 'An error occurred while deleting the product');
+      }
+    }
+  );
+
+  const createProduct = useMutation(
+    async (newProduct) => {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/products`,
+        newProduct
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['products']);
+        setIsModalOpen(false);
+        setFormData({ name: '', description: '', price: '', sku: '', quantity: '' });
+      },
+    }
+  );
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Check for empty required fields first
+    const errors = {};
+    if (!formData.price.trim()) {
+      errors.price = "Price is required";
+    }
+    if (!formData.quantity.trim()) {
+      errors.quantity = "Quantity is required";
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    const productData = {
+      ...formData,
+      price: parseFloat(formData.price),
+      quantity: parseInt(formData.quantity),
+    };
+
+    try {
+      productSchema.parse(productData);
+      setValidationErrors({});
+
+      if (isEditMode) {
+        updateProduct.mutate(productData);
+      } else {
+        createProduct.mutate(productData);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const errors = {};
+        error.errors.forEach((err) => {
+          errors[err.path[0]] = err.message;
+        });
+        setValidationErrors(errors);
+      }
+    }
+  };
+
+  const handleEdit = (product) => {
+    setFormData({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      sku: product.sku,
+      quantity: product.quantity.toString(),
+    });
+    setIsEditMode(true);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (product) => {
+    setProductToDelete(product);
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (productToDelete) {
+      deleteProduct.mutate(productToDelete.id);
+    }
+  };
+
+  if (isLoading) return (
+    <div className="p-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="h-8 bg-gray-300 rounded w-48 animate-pulse"></div>
+        <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+          <div className="h-10 bg-gray-300 rounded w-64 animate-pulse"></div>
+          <div className="h-10 bg-gray-300 rounded w-32 animate-pulse"></div>
+        </div>
+      </div>
+      <TableSkeleton rows={10} columns={5} />
+    </div>
+  );
+
+  return (
+    <div className="p-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary-800">Products</h1>
+          {showLowStock && (
+            <span className="bg-orange-100 text-orange-800 text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 rounded-full">
+              Low Stock Items
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
+          {!showLowStock && (
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={handleSearchChange}
+                className="w-full sm:w-64 pl-10 pr-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary-400">
+                <FaSearch />
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {showLowStock && (
+              <button
+                onClick={() => setShowLowStock(false)}
+                className="px-3 py-2 text-sm border border-primary-200 rounded-lg text-primary-700 hover:bg-primary-50"
+              >
+                Show All Products
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setIsEditMode(false);
+                setFormData({
+                  name: '',
+                  description: '',
+                  price: '',
+                  sku: '',
+                  quantity: ''
+                });
+                setValidationErrors({});
+                setIsModalOpen(true);
+              }}
+              className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 text-sm rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm whitespace-nowrap"
+            >
+              Add Product
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-100">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gradient-to-r from-primary-50 to-primary-100">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider hidden md:table-cell">SKU</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider hidden sm:table-cell">Quantity</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {products?.items?.map((product) => (
+              <tr key={product.id} className="hover:bg-primary-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-700">{product.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell text-gray-600">{product.sku}</td>
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-800">{formatPakistaniCurrency(product.price)}</td>
+                <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
+                  <span className={`${
+                    product.quantity <= 10 
+                      ? 'text-orange-700 bg-orange-50 border border-orange-200' 
+                      : 'text-green-700 bg-green-50 border border-green-200'
+                  } px-2 py-1 rounded-full text-xs font-medium`}>
+                    {product.quantity}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(product)}
+                      className="text-primary-600 hover:text-primary-900 inline-flex items-center gap-1"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                      </svg>
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(product)}
+                      className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m6.5 0a48.667 48.667 0 00-7.5 0" />
+                      </svg>
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="mt-4 flex justify-center">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-4 py-2 border border-primary-200 rounded-lg disabled:opacity-50 text-primary-700 hover:bg-primary-50"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg text-primary-800">
+            Page {currentPage} of {Math.ceil((products?.total || 0) / itemsPerPage)}
+          </span>
+          <button
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+            disabled={currentPage >= Math.ceil((products?.total || 0) / itemsPerPage)}
+            className="px-4 py-2 border border-primary-200 rounded-lg disabled:opacity-50 text-primary-700 hover:bg-primary-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl border border-gray-200">
+            <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2 flex items-center gap-2">
+              <FaBoxOpen className="text-primary-600" />
+              {isEditMode ? 'Edit Product' : 'Add New Product'}
+            </h2>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <FaBoxOpen className="text-primary-500" /> Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {validationErrors.name && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.name}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    rows="3"
+                  />
+                  {validationErrors.description && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.description}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <FaTag className="text-primary-500" /> SKU
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {validationErrors.sku && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.sku}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <FaDollarSign className="text-primary-500" /> Price
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {validationErrors.price && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <FaWarehouse className="text-primary-500" /> Quantity
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {validationErrors.quantity && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.quantity}</p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setValidationErrors({});
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded hover:from-primary-700 hover:to-primary-800 shadow-sm"
+                >
+                  {isEditMode ? 'Update' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setProductToDelete(null);
+          setDeleteError(null);
+        }}
+        onConfirm={confirmDelete}
+        itemName={productToDelete ? `product "${productToDelete.name}"` : ''}
+        error={deleteError}
+      />
+    </div>
+  );
+}
+
+export default Products;

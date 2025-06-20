@@ -1,0 +1,107 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String     @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  sku         String     @unique
+  quantity    Int
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  SaleItem    SaleItem[]
+  BulkPurchaseItem BulkPurchaseItem[]
+}
+
+model Sale {
+  id          String     @id @default(uuid())
+  billNumber  String     @unique
+  totalAmount Float
+  paidAmount  Float      @default(0)
+  saleDate    DateTime   @default(now())
+  vendor      Vendor?    @relation(fields: [vendorId], references: [id])
+  vendorId    String?
+  items       SaleItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  quantity  Int
+  price     Float
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  saleId    String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Vendor {
+  id        String   @id @default(uuid())
+  name      String
+  address   String?
+  phoneNumber     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  purchases BulkPurchase[]
+  sales     Sale[]
+}
+
+model BulkPurchase {
+  id          String     @id @default(uuid())
+  invoiceNumber String?   @unique
+  totalAmount Float
+  paidAmount  Float
+  purchaseDate DateTime   @default(now())
+  vendor      Vendor     @relation(fields: [vendorId], references: [id])
+  vendorId    String
+  items       BulkPurchaseItem[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model BulkPurchaseItem {
+  id            String       @id @default(uuid())
+  quantity      Int
+  purchasePrice Float
+  bulkPurchase  BulkPurchase @relation(fields: [bulkPurchaseId], references: [id])
+  bulkPurchaseId String
+  product       Product      @relation(fields: [productId], references: [id])
+  productId     String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model ShopSettings {
+  id              String   @id @default(uuid())
+  email           String
+  shopName        String
+  shopDescription String?
+  shopDescription2 String?
+  userName1       String
+  userPhone1      String
+  userName2       String?
+  userPhone2      String?
+  userName3       String?
+  userPhone3      String?
+  brand1          String?
+  brand1Registered Boolean  @default(false)
+  brand2          String?
+  brand2Registered Boolean  @default(false)
+  brand3          String?
+  brand3Registered Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
