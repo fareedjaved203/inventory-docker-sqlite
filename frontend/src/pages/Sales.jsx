@@ -21,7 +21,7 @@ const saleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "At least one item is required"),
   totalAmount: z.number().positive("Total amount must be positive"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
-  saleDate: z.string(),
+  saleDate: z.string().optional(),
 });
 
 function Sales() {
@@ -48,6 +48,7 @@ function Sales() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [saleDate, setSaleDate] = useState('');
   const [showPendingPayments, setShowPendingPayments] = useState(location?.state?.showPendingPayments || false);
 
   const updateSale = useMutation(
@@ -66,6 +67,7 @@ function Sales() {
         setSelectedProduct(null);
         setQuantity("");
         setSelectedVendor(null);
+        setSaleDate('');
         setIsEditMode(false);
         setEditingSale(null);
       },
@@ -138,6 +140,7 @@ function Sales() {
         setSelectedProduct(null);
         setQuantity("");
         setSelectedVendor(null);
+        setSaleDate('');
       },
     }
   );
@@ -239,6 +242,7 @@ function Sales() {
     setTotalAmount(sale.totalAmount);
     setPaidAmount(sale.paidAmount || 0);
     setSelectedVendor(sale.vendor || null);
+    setSaleDate(new Date(sale.saleDate).toISOString().split('T')[0]);
     setIsEditMode(true);
     setIsModalOpen(true);
   };
@@ -264,7 +268,7 @@ function Sales() {
       totalAmount: totalAmount,
       paidAmount: parsedPaidAmount,
       ...(selectedVendor && { vendorId: selectedVendor.id }),
-      saleDate: isEditMode ? editingSale.saleDate : new Date().toISOString()
+      ...(saleDate && { saleDate })
     };
 
     try {
@@ -620,6 +624,18 @@ function Sales() {
                 </div>
               </div>
 
+              {/* Sale Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sale Date (Optional)</label>
+                <input
+                  type="date"
+                  value={saleDate}
+                  onChange={(e) => setSaleDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Leave empty to use current date</p>
+              </div>
+
               {/* Vendor Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Vendor (Optional)</label>
@@ -687,6 +703,7 @@ function Sales() {
                     setQuantity("");
                     setPaidAmount(0);
                     setSelectedVendor(null);
+                    setSaleDate('');
                     setValidationErrors({});
                   }}
                   className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"

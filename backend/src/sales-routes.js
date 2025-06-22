@@ -2,6 +2,27 @@ import { validateRequest } from './middleware.js';
 import { Prisma } from '@prisma/client';
 import { saleSchema, querySchema } from './schemas.js';
 
+// Helper function to get current time in Pakistan and store as UTC
+function getCurrentPakistanTime() {
+  const now = new Date();
+  // Get current time in Pakistan (UTC+5) but store as UTC
+  // This means we subtract 5 hours from Pakistan time to get the UTC equivalent
+  return now; // Just return current time as-is
+}
+
+// Helper function to create date from YYYY-MM-DD string in Pakistan timezone
+function createPakistanDate(dateString) {
+  if (!dateString) return getCurrentPakistanTime();
+  
+  const [year, month, day] = dateString.split('-').map(Number);
+  const now = new Date();
+  
+  // Create date with specified date but current time
+  const pakistanDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
+  
+  return pakistanDate;
+}
+
 function parseDateDDMMYYYY(dateString) {
   if (!dateString) {
     return null;
@@ -71,11 +92,14 @@ export function setupSalesRoutes(app, prisma) {
           }
 
           // Create the sale with the unique bill number
+          const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : getCurrentPakistanTime();
+          
           const sale = await prisma.sale.create({
             data: {
               billNumber,
               totalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount || 0,
+              saleDate,
               ...(req.body.vendorId && { vendor: { connect: { id: req.body.vendorId } } }),
               items: {
                 create: req.body.items.map(item => ({
@@ -329,11 +353,14 @@ export function setupSalesRoutes(app, prisma) {
           });
 
           // Update the sale with new items
+          const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : undefined;
+          
           const updatedSale = await prisma.sale.update({
             where: { id: req.params.id },
             data: {
               totalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount || 0,
+              ...(saleDate && { saleDate }),
               ...(req.body.vendorId ? { vendor: { connect: { id: req.body.vendorId } } } : { vendor: { disconnect: true } }),
               items: {
                 create: req.body.items.map(item => ({

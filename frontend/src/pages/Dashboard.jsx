@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import DashboardSkeleton from '../components/DashboardSkeleton';
 import SalesChart from '../components/SalesChart';
+import SalesTrendChart from '../components/SalesTrendChart';
 import PendingPaymentsWidget from '../components/PendingPaymentsWidget';
 import { FaBox, FaWarehouse, FaExclamationTriangle, FaCalendarDay, FaCalendarWeek, FaCalendarAlt, FaCalendar } from 'react-icons/fa';
 import { RiMoneyDollarCircleFill } from "react-icons/ri";
@@ -176,6 +177,10 @@ function Dashboard() {
         </div>
       </div>
 
+      <div className="mb-8">
+        <SalesTrendChart />
+      </div>
+      
       <div className="mb-8">
         <SalesChart />
       </div>

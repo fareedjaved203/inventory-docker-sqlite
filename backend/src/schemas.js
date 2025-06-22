@@ -22,7 +22,7 @@ export const saleSchema = z.object({
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
   vendorId: z.string().optional(),
   billNumber: z.string().optional(), // Optional because it will be auto-generated
-  // saleDate: z.string().regex(/^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[0-2])\/\d{4}$/, "Date must be in DD/MM/YYYY format").optional(),
+  saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
 });
 
 export const bulkPurchaseItemSchema = z.object({
