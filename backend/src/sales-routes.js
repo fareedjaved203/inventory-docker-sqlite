@@ -5,9 +5,7 @@ import { saleSchema, querySchema } from './schemas.js';
 // Helper function to get current time in Pakistan and store as UTC
 function getCurrentPakistanTime() {
   const now = new Date();
-  // Get current time in Pakistan (UTC+5) but store as UTC
-  // This means we subtract 5 hours from Pakistan time to get the UTC equivalent
-  return now; // Just return current time as-is
+  return now;
 }
 
 // Helper function to create date from YYYY-MM-DD string in Pakistan timezone
@@ -17,7 +15,6 @@ function createPakistanDate(dateString) {
   const [year, month, day] = dateString.split('-').map(Number);
   const now = new Date();
   
-  // Create date with specified date but current time
   const pakistanDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
   
   return pakistanDate;
@@ -28,28 +25,22 @@ function parseDateDDMMYYYY(dateString) {
     return null;
   }
   
-  // Add logging to help debug the input
   console.log('Attempting to parse date:', dateString);
   
   const parts = dateString.split('/');
   if (parts.length === 3) {
     const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // Month is 0-indexed in JavaScript Date
+    const month = parseInt(parts[1], 10) - 1;
     const year = parseInt(parts[2], 10);
 
-    // Log the parsed components
     console.log('Parsed components:', { day, month: month + 1, year });
 
-    // Validate the ranges of the components before creating the date
     if (day >= 1 && day <= 31 && 
         month >= 0 && month <= 11 && 
         year >= 1900 && year <= 9999) {
       
-      // Create a UTC date object for the beginning of the day (00:00:00.000Z)
       const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
 
-      // Validate if the date components actually form a valid date
-      // This checks for cases like "31/02/2023" which would result in March 2nd
       if (date.getUTCFullYear() === year && 
           date.getUTCMonth() === month && 
           date.getUTCDate() === day) {
@@ -61,7 +52,7 @@ function parseDateDDMMYYYY(dateString) {
   }
   
   console.log('Failed to parse date:', dateString);
-  return null; // Return null for invalid date strings or incorrect format
+  return null;
 }
 
 export function setupSalesRoutes(app, prisma) {
@@ -71,17 +62,13 @@ export function setupSalesRoutes(app, prisma) {
     validateRequest({ body: saleSchema }),
     async (req, res) => {
       try {
-        // Start a transaction
         const sale = await prisma.$transaction(async (prisma) => {
-          // Generate a unique 7-digit bill number
           let billNumber;
           let isUnique = false;
           
           while (!isUnique) {
-            // Generate a random 7-digit number
             billNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
             
-            // Check if it's unique
             const existingSale = await prisma.sale.findUnique({
               where: { billNumber }
             });
@@ -91,7 +78,6 @@ export function setupSalesRoutes(app, prisma) {
             }
           }
 
-          // Create the sale with the unique bill number
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : getCurrentPakistanTime();
           
           const sale = await prisma.sale.create({
@@ -100,7 +86,7 @@ export function setupSalesRoutes(app, prisma) {
               totalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount || 0,
               saleDate,
-              ...(req.body.vendorId && { vendor: { connect: { id: req.body.vendorId } } }),
+              ...(req.body.contactId && { contact: { connect: { id: req.body.contactId } } }),
               items: {
                 create: req.body.items.map(item => ({
                   quantity: item.quantity,
@@ -117,11 +103,10 @@ export function setupSalesRoutes(app, prisma) {
                   product: true
                 }
               },
-              vendor: true
+              contact: true
             }
           });
 
-          // Update product quantities
           for (const item of req.body.items) {
             const product = await prisma.product.findUnique({
               where: { id: item.productId }
@@ -161,7 +146,6 @@ export function setupSalesRoutes(app, prisma) {
     try {
       const { page = 1, limit = 10, search = '' } = req.query;
 
-      // For SQLite, we need to use raw comparison
       const allSales = await prisma.sale.findMany({
         select: {
           id: true,
@@ -180,7 +164,6 @@ export function setupSalesRoutes(app, prisma) {
         }
       };
       
-      // Add search filter for bill number
       if (search) {
         where.OR = [
           { billNumber: { contains: search } }
@@ -200,7 +183,7 @@ export function setupSalesRoutes(app, prisma) {
                 product: true,
               },
             },
-            vendor: true,
+            contact: true,
           },
         }),
       ]);
@@ -222,16 +205,12 @@ export function setupSalesRoutes(app, prisma) {
     try {
       const { page = 1, limit = 10, search = '' } = req.query;
 
-      // Initialize the where clause for Prisma
       let where = {};
 
-      // Handle date filtering
       if (search) {
-        // First try to parse as a date
         const parsedSearchDate = parseDateDDMMYYYY(search);
         
         if (parsedSearchDate instanceof Date && !isNaN(parsedSearchDate.getTime())) {
-          // Create a range for the entire day in UTC
           const startOfDay = new Date(Date.UTC(
             parsedSearchDate.getUTCFullYear(),
             parsedSearchDate.getUTCMonth(),
@@ -249,11 +228,10 @@ export function setupSalesRoutes(app, prisma) {
           where = {
             saleDate: {
               gte: startOfDay,
-              lt: new Date(endOfDay.getTime() + 1), // Add 1ms to ensure we catch everything
+              lt: new Date(endOfDay.getTime() + 1),
             },
           };
         } else {
-          // If not a date, search by bill number
           where = {
             billNumber: {
               contains: search
@@ -262,7 +240,6 @@ export function setupSalesRoutes(app, prisma) {
         }
       }
 
-      // Execute Prisma queries concurrently for total count and items
       const [total, items] = await Promise.all([
         prisma.sale.count({ where }),
         prisma.sale.findMany({
@@ -276,7 +253,7 @@ export function setupSalesRoutes(app, prisma) {
                 product: true,
               },
             },
-            vendor: true,
+            contact: true,
           },
         }),
       ]);
@@ -304,7 +281,7 @@ export function setupSalesRoutes(app, prisma) {
               product: true,
             },
           },
-          vendor: true,
+          contact: true,
         },
       });
       if (!sale) {
@@ -323,7 +300,6 @@ export function setupSalesRoutes(app, prisma) {
     async (req, res) => {
       try {
         const sale = await prisma.$transaction(async (prisma) => {
-          // Get the existing sale
           const existingSale = await prisma.sale.findUnique({
             where: { id: req.params.id },
             include: {
@@ -335,7 +311,6 @@ export function setupSalesRoutes(app, prisma) {
             throw new Error('Sale not found');
           }
 
-          // Restore quantities from old sale items
           for (const item of existingSale.items) {
             await prisma.product.update({
               where: { id: item.productId },
@@ -347,12 +322,10 @@ export function setupSalesRoutes(app, prisma) {
             });
           }
 
-          // Delete old sale items
           await prisma.saleItem.deleteMany({
             where: { saleId: req.params.id }
           });
 
-          // Update the sale with new items
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : undefined;
           
           const updatedSale = await prisma.sale.update({
@@ -361,7 +334,7 @@ export function setupSalesRoutes(app, prisma) {
               totalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount || 0,
               ...(saleDate && { saleDate }),
-              ...(req.body.vendorId ? { vendor: { connect: { id: req.body.vendorId } } } : { vendor: { disconnect: true } }),
+              ...(req.body.contactId ? { contact: { connect: { id: req.body.contactId } } } : { contact: { disconnect: true } }),
               items: {
                 create: req.body.items.map(item => ({
                   quantity: item.quantity,
@@ -378,11 +351,10 @@ export function setupSalesRoutes(app, prisma) {
                   product: true
                 }
               },
-              vendor: true
+              contact: true
             }
           });
 
-          // Update product quantities for new items
           for (const item of req.body.items) {
             const product = await prisma.product.findUnique({
               where: { id: item.productId }
@@ -420,7 +392,6 @@ export function setupSalesRoutes(app, prisma) {
   app.delete('/api/sales/:id', async (req, res) => {
     try {
       await prisma.$transaction(async (prisma) => {
-        // Get the sale with its items
         const sale = await prisma.sale.findUnique({
           where: { id: req.params.id },
           include: {
@@ -432,7 +403,6 @@ export function setupSalesRoutes(app, prisma) {
           throw new Error('Sale not found');
         }
 
-        // Restore quantities to products
         for (const item of sale.items) {
           await prisma.product.update({
             where: { id: item.productId },
@@ -444,12 +414,10 @@ export function setupSalesRoutes(app, prisma) {
           });
         }
 
-        // First delete all sale items
         await prisma.saleItem.deleteMany({
           where: { saleId: req.params.id }
         });
 
-        // Then delete the sale
         await prisma.sale.delete({
           where: { id: req.params.id }
         });
@@ -464,23 +432,18 @@ export function setupSalesRoutes(app, prisma) {
     }
   });
 
-
-  // Update dashboard stats to include sales data
-// Cache for sales analytics data
 const analyticsCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
-  // Get sales analytics data
+const CACHE_TTL = 5 * 60 * 1000;
+
 app.get('/api/sales-analytics', async (req, res) => {
   try {
     const { startDate, endDate, interval = 'daily' } = req.query;
 
-    // Validate interval
     const validIntervals = ['daily', 'weekly', 'monthly', 'yearly'];
     if (!validIntervals.includes(interval)) {
       return res.status(400).json({ error: 'Invalid interval. Must be one of: daily, weekly, monthly, yearly' });
     }
 
-    // Default date ranges
     let start, end;
     if (!startDate || !endDate) {
       end = new Date();
@@ -516,8 +479,6 @@ app.get('/api/sales-analytics', async (req, res) => {
       return res.json(cached.data);
     }
 
-    // For SQLite, we'll use a simpler approach without date_range generation
-    // Get all sales in the date range
     const sales = await prisma.sale.findMany({
       where: {
         saleDate: {
@@ -531,7 +492,6 @@ app.get('/api/sales-analytics', async (req, res) => {
       }
     });
 
-    // Process the data based on interval
     const salesByDate = new Map();
     
     sales.forEach(sale => {
@@ -543,7 +503,6 @@ app.get('/api/sales-analytics', async (req, res) => {
           groupKey = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate()).toISOString().split('T')[0];
           break;
         case 'weekly':
-          // Get the first day of the week (Sunday)
           const firstDayOfWeek = new Date(saleDate);
           const day = saleDate.getDay();
           firstDayOfWeek.setDate(saleDate.getDate() - day);
@@ -566,7 +525,6 @@ app.get('/api/sales-analytics', async (req, res) => {
       current.count += 1;
     });
     
-    // Generate all dates in the range for consistent data points
     const allDates = [];
     const currentDate = new Date(start);
     
@@ -597,7 +555,6 @@ app.get('/api/sales-analytics', async (req, res) => {
       }
     }
     
-    // Format the final result
     const formatted = allDates.map(date => ({
       date: interval === 'daily' || interval === 'weekly' ? `${date}T00:00:00.000Z` : 
            interval === 'monthly' ? `${date}-01T00:00:00.000Z` : 
@@ -606,7 +563,6 @@ app.get('/api/sales-analytics', async (req, res) => {
       count: salesByDate.has(date) ? salesByDate.get(date).count : 0
     }));
 
-    // Save to cache
     analyticsCache.set(cacheKey, {
       timestamp: Date.now(),
       data: formatted

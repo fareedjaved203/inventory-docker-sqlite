@@ -21,7 +21,7 @@ function Sidebar() {
     { path: '/', label: 'Dashboard', icon: <FaChartLine /> },
     { path: '/products', label: 'Products', icon: <FaBoxOpen /> },
     { path: '/sales', label: 'Sales', icon: <FaMoneyBillWave /> },
-    { path: '/vendors', label: 'Vendors', icon: <FaBuilding /> },
+    { path: '/contacts', label: 'Contacts', icon: <FaBuilding /> },
     { path: '/bulk', label: 'Bulk Purchasing', icon: <FaShoppingCart /> },
     { path: '/settings', label: 'Settings', icon: <FaCog /> },
   ];

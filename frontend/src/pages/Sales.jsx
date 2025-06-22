@@ -47,7 +47,7 @@ function Sales() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
-  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [selectedContact, setSelectedContact] = useState(null);
   const [saleDate, setSaleDate] = useState('');
   const [showPendingPayments, setShowPendingPayments] = useState(location?.state?.showPendingPayments || false);
 
@@ -66,7 +66,7 @@ function Sales() {
         setSaleItems([]);
         setSelectedProduct(null);
         setQuantity("");
-        setSelectedVendor(null);
+        setSelectedContact(null);
         setSaleDate('');
         setIsEditMode(false);
         setEditingSale(null);
@@ -94,9 +94,9 @@ function Sales() {
     return response.data.items;
   });
 
-  // Fetch vendors for dropdown
-  const { data: vendors } = useQuery(['vendors'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/vendors`);
+  // Fetch contacts for dropdown
+  const { data: contacts } = useQuery(['contacts'], async () => {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`);
     return response.data.items;
   });
 
@@ -139,7 +139,7 @@ function Sales() {
         setSaleItems([]);
         setSelectedProduct(null);
         setQuantity("");
-        setSelectedVendor(null);
+        setSelectedContact(null);
         setSaleDate('');
       },
     }
@@ -241,7 +241,7 @@ function Sales() {
     })));
     setTotalAmount(sale.totalAmount);
     setPaidAmount(sale.paidAmount || 0);
-    setSelectedVendor(sale.vendor || null);
+    setSelectedContact(sale.contact || null);
     setSaleDate(new Date(sale.saleDate).toISOString().split('T')[0]);
     setIsEditMode(true);
     setIsModalOpen(true);
@@ -267,7 +267,7 @@ function Sales() {
       })),
       totalAmount: totalAmount,
       paidAmount: parsedPaidAmount,
-      ...(selectedVendor && { vendorId: selectedVendor.id }),
+      ...(selectedContact && { contactId: selectedContact.id }),
       ...(saleDate && { saleDate })
     };
 
@@ -408,7 +408,7 @@ function Sales() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Bill Number</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Vendor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Contact</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Items</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Total Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Paid Amount</th>
@@ -422,12 +422,12 @@ function Sales() {
                   #{sale.billNumber}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                  {new Date(sale.saleDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
+                  {new Date(sale.saleDate).toLocaleDateString('en-GB')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                  {sale.vendor ? (
+                  {sale.contact ? (
                     <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                      {sale.vendor.name}
+                      {sale.contact.name}
                     </span>
                   ) : (
                     <span className="text-gray-400 text-sm">-</span>
@@ -636,21 +636,21 @@ function Sales() {
                 <p className="text-xs text-gray-500 mt-1">Leave empty to use current date</p>
               </div>
 
-              {/* Vendor Selection */}
+              {/* Contact Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vendor (Optional)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact (Optional)</label>
                 <select
-                  value={selectedVendor?.id || ''}
+                  value={selectedContact?.id || ''}
                   onChange={(e) => {
-                    const vendorId = e.target.value;
-                    setSelectedVendor(vendorId ? vendors.find(v => v.id === vendorId) : null);
+                    const contactId = e.target.value;
+                    setSelectedContact(contactId ? contacts.find(c => c.id === contactId) : null);
                   }}
                   className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
-                  <option value="">Select a vendor (optional)</option>
-                  {vendors?.map((vendor) => (
-                    <option key={vendor.id} value={vendor.id}>
-                      {vendor.name}
+                  <option value="">Select a contact (optional)</option>
+                  {contacts?.map((contact) => (
+                    <option key={contact.id} value={contact.id}>
+                      {contact.name}
                     </option>
                   ))}
                 </select>
@@ -702,7 +702,7 @@ function Sales() {
                     setSelectedProduct(null);
                     setQuantity("");
                     setPaidAmount(0);
-                    setSelectedVendor(null);
+                    setSelectedContact(null);
                     setSaleDate('');
                     setValidationErrors({});
                   }}

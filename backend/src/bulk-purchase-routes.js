@@ -26,12 +26,12 @@ export function setupBulkPurchaseRoutes(app, prisma) {
         }
       };
       
-      // Add search filter for ID, invoice number and vendor name
+      // Add search filter for ID, invoice number and contact name
       if (search) {
         where.OR = [
           { id: { contains: search } },
           { invoiceNumber: { contains: search } },
-          { vendor: { name: { contains: search } } }
+          { contact: { name: { contains: search } } }
         ];
       }
 
@@ -43,7 +43,7 @@ export function setupBulkPurchaseRoutes(app, prisma) {
           take: limit,
           orderBy: { purchaseDate: 'desc' },
           include: {
-            vendor: true,
+            contact: true,
             items: {
               include: {
                 product: true,
@@ -68,22 +68,22 @@ export function setupBulkPurchaseRoutes(app, prisma) {
   // Get all bulk purchases with search and pagination
   app.get('/api/bulk-purchases', validateRequest({ query: querySchema }), async (req, res) => {
     try {
-      const { page = 1, limit = 10, search = '', vendorId = '' } = req.query;
+      const { page = 1, limit = 10, search = '', contactId = '' } = req.query;
 
       const where = {};
       
-      // Add search filter for ID, invoice number and vendor name
+      // Add search filter for ID, invoice number and contact name
       if (search) {
         where.OR = [
           { id: { contains: search } },
           { invoiceNumber: { contains: search } },
-          { vendor: { name: { contains: search } } }
+          { contact: { name: { contains: search } } }
         ];
       }
       
-      // Add vendor filter
-      if (vendorId) {
-        where.vendorId = vendorId;
+      // Add contact filter
+      if (contactId) {
+        where.contactId = contactId;
       }
 
       const [total, items] = await Promise.all([
@@ -94,7 +94,7 @@ export function setupBulkPurchaseRoutes(app, prisma) {
           take: limit,
           orderBy: { purchaseDate: 'desc' },
           include: {
-            vendor: true,
+            contact: true,
             items: {
               include: {
                 product: true,
@@ -122,7 +122,7 @@ export function setupBulkPurchaseRoutes(app, prisma) {
       const purchase = await prisma.bulkPurchase.findUnique({
         where: { id: req.params.id },
         include: {
-          vendor: true,
+          contact: true,
           items: {
             include: {
               product: true,
@@ -160,8 +160,8 @@ export function setupBulkPurchaseRoutes(app, prisma) {
               totalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount,
               purchaseDate: req.body.purchaseDate ? new Date(req.body.purchaseDate) : new Date(),
-              vendor: {
-                connect: { id: req.body.vendorId }
+              contact: {
+                connect: { id: req.body.contactId }
               },
               items: {
                 create: req.body.items.map(item => ({
@@ -174,7 +174,7 @@ export function setupBulkPurchaseRoutes(app, prisma) {
               }
             },
             include: {
-              vendor: true,
+              contact: true,
               items: {
                 include: {
                   product: true
@@ -249,8 +249,8 @@ export function setupBulkPurchaseRoutes(app, prisma) {
               totalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount,
               purchaseDate: req.body.purchaseDate ? new Date(req.body.purchaseDate) : undefined,
-              vendor: {
-                connect: { id: req.body.vendorId }
+              contact: {
+                connect: { id: req.body.contactId }
               },
               items: {
                 create: req.body.items.map(item => ({
@@ -263,7 +263,7 @@ export function setupBulkPurchaseRoutes(app, prisma) {
               }
             },
             include: {
-              vendor: true,
+              contact: true,
               items: {
                 include: {
                   product: true

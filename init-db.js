@@ -14,13 +14,39 @@ async function main() {
   
   try {
     // Check if database is already initialized by trying to count products
+    let isNewDatabase = false;
     try {
       await prisma.product.count();
-      console.log('Database already initialized.');
-      return;
+      console.log('Database already exists.');
     } catch (error) {
       console.log('Database not initialized. Creating schema...');
+      isNewDatabase = true;
     }
+    
+    // If database exists, check if we need to migrate from Vendor to Contact
+    if (!isNewDatabase) {
+      try {
+        // Try to access Contact table
+        await prisma.contact.count();
+        console.log('Database already migrated to Contact schema.');
+        return;
+      } catch (error) {
+        // Contact table doesn't exist, need to migrate
+        console.log('Migrating from Vendor to Contact schema...');
+        try {
+          await prisma.$executeRaw`ALTER TABLE Vendor RENAME TO Contact;`;
+          await prisma.$executeRaw`ALTER TABLE Sale RENAME COLUMN vendorId TO contactId;`;
+          await prisma.$executeRaw`ALTER TABLE BulkPurchase RENAME COLUMN vendorId TO contactId;`;
+          console.log('Migration completed successfully.');
+          return;
+        } catch (migrationError) {
+          console.error('Migration failed:', migrationError);
+          // Continue with schema creation if migration fails
+        }
+      }
+    }
+    
+    if (!isNewDatabase) return;
     
     // Read the SQL migration file
     const sqlPath = path.join(__dirname, 'prisma', 'migrations', '20250620_sqlite_migration', 'migration.sql');

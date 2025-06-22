@@ -52,11 +52,11 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                 <p className="font-medium">{new Date(sale.saleDate).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-gray-600">Vendor</p>
+                <p className="text-gray-600">Contact</p>
                 <p className="font-medium">
-                  {sale.vendor ? (
+                  {sale.contact ? (
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
-                      {sale.vendor.name}
+                      {sale.contact.name}
                     </span>
                   ) : (
                     <span className="text-gray-400">Not specified</span>

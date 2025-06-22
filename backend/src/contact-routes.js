@@ -1,9 +1,9 @@
 import { validateRequest } from './middleware.js';
-import { vendorSchema, vendorUpdateSchema, querySchema } from './schemas.js';
+import { contactSchema, contactUpdateSchema, querySchema } from './schemas.js';
 
-export function setupVendorRoutes(app, prisma) {
-  // Get all vendors with search and pagination
-  app.get('/api/vendors', validateRequest({ query: querySchema }), async (req, res) => {
+export function setupContactRoutes(app, prisma) {
+  // Get all contacts with search and pagination
+  app.get('/api/contacts', validateRequest({ query: querySchema }), async (req, res) => {
     try {
       const { page = 1, limit = 10, search = '' } = req.query;
 
@@ -18,8 +18,8 @@ export function setupVendorRoutes(app, prisma) {
         : {};
 
       const [total, items] = await Promise.all([
-        prisma.vendor.count({ where }),
-        prisma.vendor.findMany({
+        prisma.contact.count({ where }),
+        prisma.contact.findMany({
           where,
           skip: (page - 1) * limit,
           take: limit,
@@ -41,48 +41,48 @@ export function setupVendorRoutes(app, prisma) {
     }
   });
 
-  // Get a single vendor
-  app.get('/api/vendors/:id', async (req, res) => {
+  // Get a single contact
+  app.get('/api/contacts/:id', async (req, res) => {
     try {
-      const vendor = await prisma.vendor.findUnique({
+      const contact = await prisma.contact.findUnique({
         where: { id: req.params.id },
       });
 
-      if (!vendor) {
-        return res.status(404).json({ error: 'Vendor not found' });
+      if (!contact) {
+        return res.status(404).json({ error: 'Contact not found' });
       }
 
       res.json({
-        ...vendor,
-        id: vendor.id.toString(),
+        ...contact,
+        id: contact.id.toString(),
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // Create a new vendor
+  // Create a new contact
   app.post(
-    '/api/vendors',
-    validateRequest({ body: vendorSchema }),
+    '/api/contacts',
+    validateRequest({ body: contactSchema }),
     async (req, res) => {
       try {
-        // Check if vendor with same name exists
-        const existingVendor = await prisma.vendor.findFirst({
+        // Check if contact with same name exists
+        const existingContact = await prisma.contact.findFirst({
           where: { name: req.body.name }
         });
 
-        if (existingVendor) {
-          return res.status(400).json({ error: 'A vendor with this name already exists' });
+        if (existingContact) {
+          return res.status(400).json({ error: 'A contact with this name already exists' });
         }
 
-        const vendor = await prisma.vendor.create({
+        const contact = await prisma.contact.create({
           data: req.body,
         });
 
         res.status(201).json({
-          ...vendor,
-          id: vendor.id.toString(),
+          ...contact,
+          id: contact.id.toString(),
         });
       } catch (error) {
         res.status(500).json({ error: error.message });
@@ -90,15 +90,15 @@ export function setupVendorRoutes(app, prisma) {
     }
   );
 
-  // Update a vendor
+  // Update a contact
   app.put(
-    '/api/vendors/:id',
-    validateRequest({ body: vendorUpdateSchema }),
+    '/api/contacts/:id',
+    validateRequest({ body: contactUpdateSchema }),
     async (req, res) => {
       try {
-        // Check if vendor with same name exists (excluding current vendor)
+        // Check if contact with same name exists (excluding current contact)
         if (req.body.name) {
-          const existingVendor = await prisma.vendor.findFirst({
+          const existingContact = await prisma.contact.findFirst({
             where: {
               name: req.body.name,
               NOT: {
@@ -107,40 +107,40 @@ export function setupVendorRoutes(app, prisma) {
             }
           });
 
-          if (existingVendor) {
-            return res.status(400).json({ error: 'A vendor with this name already exists' });
+          if (existingContact) {
+            return res.status(400).json({ error: 'A contact with this name already exists' });
           }
         }
 
-        const vendor = await prisma.vendor.update({
+        const contact = await prisma.contact.update({
           where: { id: req.params.id },
           data: req.body,
         });
 
         res.json({
-          ...vendor,
-          id: vendor.id.toString(),
+          ...contact,
+          id: contact.id.toString(),
         });
       } catch (error) {
         if (error.code === 'P2025') {
-          return res.status(404).json({ error: 'Vendor not found' });
+          return res.status(404).json({ error: 'Contact not found' });
         }
         res.status(500).json({ error: error.message });
       }
     }
   );
 
-  // Delete a vendor
-  app.delete('/api/vendors/:id', async (req, res) => {
+  // Delete a contact
+  app.delete('/api/contacts/:id', async (req, res) => {
     try {
-      await prisma.vendor.delete({
+      await prisma.contact.delete({
         where: { id: req.params.id },
       });
       
       res.status(204).send();
     } catch (error) {
       if (error.code === 'P2025') {
-        return res.status(404).json({ error: 'Vendor not found' });
+        return res.status(404).json({ error: 'Contact not found' });
       }
       res.status(500).json({ error: error.message });
     }

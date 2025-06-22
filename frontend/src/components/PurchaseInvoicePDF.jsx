@@ -211,16 +211,16 @@ function PurchaseInvoicePDF({ purchase, shopSettings }) {
             </Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.label}>Vendor:</Text>
-            <Text style={styles.value}>{purchase.vendor.name}</Text>
+            <Text style={styles.label}>Contact:</Text>
+            <Text style={styles.value}>{purchase.contact?.name || 'N/A'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>Address:</Text>
-            <Text style={styles.value}>{purchase.vendor.address || 'N/A'}</Text>
+            <Text style={styles.value}>{purchase.contact?.address || 'N/A'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>Phone:</Text>
-            <Text style={styles.value}>{purchase.vendor.phoneNumber}</Text>
+            <Text style={styles.value}>{purchase.contact?.phoneNumber || 'N/A'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>Invoice:</Text>

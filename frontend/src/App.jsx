@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Products from './pages/Products';
 import Sales from './pages/Sales';
-import Vendors from './pages/Vendors';
+import Contacts from './pages/Contacts';
 import BulkPurchasing from './pages/BulkPurchasing';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
@@ -22,7 +22,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/products" element={<Products />} />
               <Route path="/sales" element={<Sales />} />
-              <Route path="/vendors" element={<Vendors />} />
+              <Route path="/contacts" element={<Contacts />} />
               <Route path="/bulk" element={<BulkPurchasing />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />

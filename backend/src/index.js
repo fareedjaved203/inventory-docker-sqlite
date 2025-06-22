@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { PrismaClient } from '@prisma/client';
 import { productSchema, productUpdateSchema, querySchema } from './schemas.js';
-import { setupVendorRoutes } from './vendor-routes.js';
+import { setupContactRoutes } from './contact-routes.js';
 import { setupSalesRoutes } from './sales-routes.js';
 import { setupBulkPurchaseRoutes } from './bulk-purchase-routes.js';
 import { setupDashboardRoutes } from './dashboard-routes.js';
@@ -35,7 +35,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Setup routes
-setupVendorRoutes(app, prisma);
+setupContactRoutes(app, prisma);
 setupSalesRoutes(app, prisma);
 setupBulkPurchaseRoutes(app, prisma);
 setupDashboardRoutes(app, prisma);

@@ -22,6 +22,7 @@ COPY backend/src ./src
 COPY backend/prisma ./prisma
 COPY backend/.env ./.env
 COPY init-db.js ./
+COPY migrate-vendor-to-contact.js ./
 
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist

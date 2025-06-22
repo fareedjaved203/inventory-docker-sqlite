@@ -7,12 +7,12 @@ import TableSkeleton from '../components/TableSkeleton';
 import { debounce } from 'lodash';
 import { FaSearch, FaBuilding, FaMapMarkerAlt, FaPhone, FaUserPlus } from 'react-icons/fa';
 
-function Vendors() {
+function Contacts() {
   const queryClient = useQueryClient();
   const searchInputRef = useRef(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedVendor, setSelectedVendor] = useState(null);
+  const [selectedContact, setSelectedContact] = useState(null);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -38,12 +38,12 @@ function Vendors() {
     debouncedSearch(e.target.value);
   };
 
-  // Fetch vendors with React Query
-  const { data: vendorsData, isLoading, error } = useQuery(
-    ['vendors', page, debouncedSearchTerm],
+  // Fetch contacts with React Query
+  const { data: contactsData, isLoading, error } = useQuery(
+    ['contacts', page, debouncedSearchTerm],
     async () => {
       const response = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/vendors?page=${page}&search=${debouncedSearchTerm}`
+        `${import.meta.env.VITE_API_URL}/api/contacts?page=${page}&search=${debouncedSearchTerm}`
       );
       return response.data;
     }
@@ -54,92 +54,92 @@ function Vendors() {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
-  }, [vendorsData]);
+  }, [contactsData]);
 
-  // Create vendor mutation
-  const createVendor = useMutation(
+  // Create contact mutation
+  const createContact = useMutation(
     async (data) => {
       const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/vendors`,
+        `${import.meta.env.VITE_API_URL}/api/contacts`,
         data
       );
       return response.data;
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['vendors']);
+        queryClient.invalidateQueries(['contacts']);
         setShowAddModal(false);
-        setSelectedVendor(null);
+        setSelectedContact(null);
         reset();
       },
       onError: (error) => {
-        return error.response?.data?.error || 'Failed to create vendor';
+        return error.response?.data?.error || 'Failed to create contact';
       }
     }
   );
 
-  // Update vendor mutation
-  const updateVendor = useMutation(
+  // Update contact mutation
+  const updateContact = useMutation(
     async ({ id, data }) => {
       const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/vendors/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/contacts/${id}`,
         data
       );
       return response.data;
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['vendors']);
+        queryClient.invalidateQueries(['contacts']);
         setShowAddModal(false);
-        setSelectedVendor(null);
+        setSelectedContact(null);
         reset();
       },
       onError: (error) => {
-        return error.response?.data?.error || 'Failed to update vendor';
+        return error.response?.data?.error || 'Failed to update contact';
       }
     }
   );
 
-  // Delete vendor mutation
-  const deleteVendor = useMutation(
+  // Delete contact mutation
+  const deleteContact = useMutation(
     async (id) => {
       const response = await axios.delete(
-        `${import.meta.env.VITE_API_URL}/api/vendors/${id}`
+        `${import.meta.env.VITE_API_URL}/api/contacts/${id}`
       );
       return response.data;
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(['vendors']);
+        queryClient.invalidateQueries(['contacts']);
         setShowDeleteModal(false);
-        setSelectedVendor(null);
+        setSelectedContact(null);
         setDeleteError(null);
       },
       onError: (error) => {
-        setDeleteError(error.response?.data?.error || 'Failed to delete vendor');
+        setDeleteError(error.response?.data?.error || 'Failed to delete contact');
       }
     }
   );
 
   const onSubmit = (data) => {
-    if (selectedVendor) {
-      updateVendor.mutate({ id: selectedVendor.id, data });
+    if (selectedContact) {
+      updateContact.mutate({ id: selectedContact.id, data });
     } else {
-      createVendor.mutate(data);
+      createContact.mutate(data);
     }
   };
 
   const handleDelete = () => {
-    if (selectedVendor) {
-      deleteVendor.mutate(selectedVendor.id);
+    if (selectedContact) {
+      deleteContact.mutate(selectedContact.id);
     }
   };
 
-  const handleEdit = (vendor) => {
-    setSelectedVendor(vendor);
-    setValue('name', vendor.name);
-    setValue('address', vendor.address);
-    setValue('phoneNumber', vendor.phoneNumber);
+  const handleEdit = (contact) => {
+    setSelectedContact(contact);
+    setValue('name', contact.name);
+    setValue('address', contact.address);
+    setValue('phoneNumber', contact.phoneNumber);
     setShowAddModal(true);
   };
 
@@ -159,7 +159,7 @@ function Vendors() {
     <div className="p-4">
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
         <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error.message || 'Failed to fetch vendors'}</span>
+        <span className="block sm:inline">{error.message || 'Failed to fetch contacts'}</span>
       </div>
     </div>
   );
@@ -167,13 +167,13 @@ function Vendors() {
   return (
     <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary-800">Vendors</h1>
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-primary-800">Contacts</h1>
         <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
           <div className="relative">
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search vendors..."
+              placeholder="Search contacts..."
               value={searchTerm}
               onChange={handleSearchChange}
               className="w-full sm:w-48 md:w-64 pl-10 pr-3 py-2 text-sm border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -185,13 +185,13 @@ function Vendors() {
           <button
             onClick={() => {
               setShowAddModal(true);
-              setSelectedVendor(null);
+              setSelectedContact(null);
               reset();
             }}
             className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 text-sm rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm whitespace-nowrap flex items-center gap-2"
           >
             <FaUserPlus />
-            Add Vendor
+            Add Contact
           </button>
         </div>
       </div>
@@ -215,15 +215,15 @@ function Vendors() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {vendorsData?.items?.map((vendor) => (
-              <tr key={vendor.id} className="hover:bg-primary-50 transition-colors">
-                <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-700">{vendor.name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{vendor.address || '-'}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{vendor.phoneNumber}</td>
+            {contactsData?.items?.map((contact) => (
+              <tr key={contact.id} className="hover:bg-primary-50 transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-700">{contact.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{contact.address || '-'}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-700">{contact.phoneNumber}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex space-x-2">
                     <button
-                      onClick={() => handleEdit(vendor)}
+                      onClick={() => handleEdit(contact)}
                       className="text-primary-600 hover:text-primary-900 inline-flex items-center gap-1"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -233,7 +233,7 @@ function Vendors() {
                     </button>
                     <button
                       onClick={() => {
-                        setSelectedVendor(vendor);
+                        setSelectedContact(contact);
                         setShowDeleteModal(true);
                       }}
                       className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
@@ -260,11 +260,11 @@ function Vendors() {
           Previous
         </button>
         <span className="px-4 py-2 bg-primary-50 border border-primary-200 rounded-lg text-primary-800">
-          Page {page} of {vendorsData?.totalPages || 1}
+          Page {page} of {contactsData?.totalPages || 1}
         </span>
         <button
-          onClick={() => setPage((p) => Math.min(vendorsData?.totalPages || 1, p + 1))}
-          disabled={page === (vendorsData?.totalPages || 1)}
+          onClick={() => setPage((p) => Math.min(contactsData?.totalPages || 1, p + 1))}
+          disabled={page === (contactsData?.totalPages || 1)}
           className="bg-primary-100 text-primary-700 px-4 py-2 rounded hover:bg-primary-200 disabled:opacity-50 border border-primary-200"
         >
           Next
@@ -276,7 +276,7 @@ function Vendors() {
           <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl border border-gray-200">
             <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2 flex items-center gap-2">
               <FaBuilding className="text-primary-600" />
-              {selectedVendor ? 'Edit Vendor' : 'Add New Vendor'}
+              {selectedContact ? 'Edit Contact' : 'Add New Contact'}
             </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-4">
@@ -336,7 +336,7 @@ function Vendors() {
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
-                    setSelectedVendor(null);
+                    setSelectedContact(null);
                     reset();
                   }}
                   className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
@@ -347,7 +347,7 @@ function Vendors() {
                   type="submit"
                   className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded hover:from-primary-700 hover:to-primary-800 shadow-sm"
                 >
-                  {selectedVendor ? 'Update' : 'Save'}
+                  {selectedContact ? 'Update' : 'Save'}
                 </button>
               </div>
             </form>
@@ -355,14 +355,14 @@ function Vendors() {
         </div>
       )}
 
-      {showDeleteModal && selectedVendor && (
+      {showDeleteModal && selectedContact && (
         <DeleteModal
           isOpen={showDeleteModal}
-          itemName={selectedVendor.name}
+          itemName={selectedContact.name}
           onConfirm={handleDelete}
           onClose={() => {
             setShowDeleteModal(false);
-            setSelectedVendor(null);
+            setSelectedContact(null);
             setDeleteError(null);
           }}
           error={deleteError}
@@ -372,4 +372,4 @@ function Vendors() {
   );
 }
 
-export default Vendors;
+export default Contacts;

@@ -52,8 +52,8 @@ function PurchaseDetailsModal({ purchase, isOpen, onClose }) {
                 <p className="font-medium">{new Date(purchase.purchaseDate).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-gray-600">Vendor</p>
-                <p className="font-medium">{purchase.vendor.name}</p>
+                <p className="text-gray-600">Contact</p>
+                <p className="font-medium">{purchase.contact?.name || 'N/A'}</p>
               </div>
             </div>
           </div>

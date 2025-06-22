@@ -29,8 +29,8 @@ model Sale {
   totalAmount Float
   paidAmount  Float      @default(0)
   saleDate    DateTime   @default(now())
-  vendor      Vendor?    @relation(fields: [vendorId], references: [id])
-  vendorId    String?
+  contact     Contact?   @relation(fields: [contactId], references: [id])
+  contactId   String?
   items       SaleItem[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -48,7 +48,7 @@ model SaleItem {
   updatedAt DateTime @updatedAt
 }
 
-model Vendor {
+model Contact {
   id        String   @id @default(uuid())
   name      String
   address   String?
@@ -65,8 +65,8 @@ model BulkPurchase {
   totalAmount Float
   paidAmount  Float
   purchaseDate DateTime   @default(now())
-  vendor      Vendor     @relation(fields: [vendorId], references: [id])
-  vendorId    String
+  contact     Contact    @relation(fields: [contactId], references: [id])
+  contactId   String
   items       BulkPurchaseItem[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

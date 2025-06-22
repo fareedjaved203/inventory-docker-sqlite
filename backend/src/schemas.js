@@ -20,7 +20,7 @@ export const saleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "At least one item is required"),
   totalAmount: z.number().positive("Total amount must be positive"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
-  vendorId: z.string().optional(),
+  contactId: z.string().optional(),
   billNumber: z.string().optional(), // Optional because it will be auto-generated
   saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
 });
@@ -32,7 +32,7 @@ export const bulkPurchaseItemSchema = z.object({
 });
 
 export const bulkPurchaseSchema = z.object({
-  vendorId: z.string().min(1, "Vendor is required"),
+  contactId: z.string().min(1, "Contact is required"),
   items: z.array(bulkPurchaseItemSchema).min(1, "At least one item is required"),
   totalAmount: z.number().positive("Total amount must be positive"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
@@ -40,19 +40,19 @@ export const bulkPurchaseSchema = z.object({
   purchaseDate: z.string().optional(),
 });
 
-export const vendorProductSchema = z.object({
+export const contactProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   quantity: z.number().int().min(0, "Quantity must be non-negative"),
   price: z.number().positive("Price must be positive"),
 });
 
-export const vendorSchema = z.object({
+export const contactSchema = z.object({
   name: z.string().min(1, "Name is required"),
   address: z.string().optional(),
   phoneNumber: z.string().min(1, "Phone number is required"),
 });
 
-export const vendorUpdateSchema = vendorSchema.partial();
+export const contactUpdateSchema = contactSchema.partial();
 
 export const querySchema = z.object({
   page: z.string().regex(/^\d+$/).transform(Number).optional(),

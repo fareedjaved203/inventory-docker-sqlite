@@ -16,7 +16,7 @@ const bulkPurchaseItemSchema = z.object({
 });
 
 const bulkPurchaseSchema = z.object({
-  vendorId: z.string().min(1, "Vendor is required"),
+  contactId: z.string().min(1, "Contact is required"),
   items: z.array(bulkPurchaseItemSchema).min(1, "At least one item is required"),
   totalAmount: z.number().positive("Total amount must be positive"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
@@ -40,15 +40,14 @@ function BulkPurchasing() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState(null);
   const [productSelected, isProductSelected] = useState(false);
-  const [vendorSelected, isVendorSelected] = useState(false);
+  const [contactSelected, isContactSelected] = useState(false);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [selectedVendor, setSelectedVendor] = useState(null);
-  const [vendorSearchTerm, setVendorSearchTerm] = useState("");
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [showPendingPayments, setShowPendingPayments] = useState(location.state?.showPendingPayments || false);
-
 
   // Debounced search
   const debouncedSearch = useCallback(
@@ -58,7 +57,7 @@ function BulkPurchasing() {
     []
   );
 
-  // Handle search by purchase ID or vendor name
+  // Handle search by purchase ID or contact name
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     debouncedSearch(e.target.value);
@@ -74,7 +73,6 @@ function BulkPurchasing() {
     ['bulk-purchases', debouncedSearchTerm, currentPage, showPendingPayments],
     async () => {
       const endpoint = showPendingPayments ? '/api/bulk-purchases/pending-payments' : '/api/bulk-purchases';
-      // The search parameter will be used for both purchase ID and vendor name on the backend
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}${endpoint}?page=${currentPage}&limit=${itemsPerPage}&search=${debouncedSearchTerm}`
       );
@@ -82,9 +80,9 @@ function BulkPurchasing() {
     }
   );
 
-  // Fetch vendors for dropdown
-  const { data: vendors } = useQuery(['vendors'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/vendors`);
+  // Fetch contacts for dropdown
+  const { data: contacts } = useQuery(['contacts'], async () => {
+    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`);
     return response.data.items;
   });
 
@@ -94,17 +92,17 @@ function BulkPurchasing() {
     return response.data.items;
   });
 
-  // Filter vendors based on search term
-  const [filteredVendors, setFilteredVendors] = useState([]);
+  // Filter contacts based on search term
+  const [filteredContacts, setFilteredContacts] = useState([]);
   useEffect(() => {
-    if (vendors) {
-      setFilteredVendors(
-        vendors.filter(vendor =>
-          vendor.name.toLowerCase().includes(vendorSearchTerm.toLowerCase())
+    if (contacts) {
+      setFilteredContacts(
+        contacts.filter(contact =>
+          contact.name.toLowerCase().includes(contactSearchTerm.toLowerCase())
         )
       );
     }
-  }, [vendors, vendorSearchTerm]);
+  }, [contacts, contactSearchTerm]);
 
   // Filter products based on search term
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -193,16 +191,16 @@ function BulkPurchasing() {
 
   const resetForm = () => {
     setPurchaseItems([]);
-    setSelectedVendor(null);
+    setSelectedContact(null);
     setSelectedProduct(null);
     setQuantity("");
     setPurchasePrice("");
-    setVendorSearchTerm("");
+    setContactSearchTerm("");
     setProductSearchTerm("");
     setTotalAmount(0);
     setPaidAmount(0);
     setValidationErrors({});
-    isVendorSelected(false);
+    isContactSelected(false);
     isProductSelected(false);
     setIsEditMode(false);
     setEditingPurchase(null);
@@ -246,10 +244,10 @@ function BulkPurchasing() {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!selectedVendor) {
+    if (!selectedContact) {
       setValidationErrors({
         ...validationErrors,
-        vendor: "Please select a vendor"
+        contact: "Please select a contact"
       });
       return;
     }
@@ -272,7 +270,7 @@ function BulkPurchasing() {
     }
 
     const purchaseData = {
-      vendorId: selectedVendor.id,
+      contactId: selectedContact.id,
       items: purchaseItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
@@ -305,9 +303,9 @@ function BulkPurchasing() {
 
   const handleEdit = (purchase) => {
     setEditingPurchase(purchase);
-    setSelectedVendor(purchase.vendor);
-    setVendorSearchTerm(purchase.vendor.name);
-    isVendorSelected(true);
+    setSelectedContact(purchase.contact);
+    setContactSearchTerm(purchase.contact.name);
+    isContactSelected(true);
     
     setPurchaseItems(purchase.items.map(item => ({
       productId: item.product.id,
@@ -363,7 +361,7 @@ function BulkPurchasing() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search by invoice or vendor..."
+              placeholder="Search by invoice or contact..."
               value={searchTerm}
               onChange={handleSearchChange}
               className="w-full sm:w-48 md:w-64 pl-10 pr-3 py-2 text-sm border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -407,7 +405,7 @@ function BulkPurchasing() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Invoice Number</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Vendor</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Contact</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Total Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Paid Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Actions</th>
@@ -420,10 +418,10 @@ function BulkPurchasing() {
                   {purchase.invoiceNumber || `#${purchase.id.slice(-6)}`}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                  {new Date(purchase.purchaseDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
+                  {new Date(purchase.purchaseDate).toLocaleDateString('en-GB')}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                  {purchase.vendor.name}
+                  {purchase.contact.name}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-800">
                   {formatPakistaniCurrency(purchase.totalAmount)}
@@ -510,50 +508,48 @@ function BulkPurchasing() {
           <div className="bg-white p-6 rounded-lg w-full max-w-lg shadow-xl border border-gray-200">
             <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2">{isEditMode ? "Edit Purchase" : "New Purchase"}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Vendor Selection */}
+              {/* Contact Selection */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Vendor</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
                 <div className="relative">
                   <input
                     type="text"
-                    value={vendorSearchTerm}
+                    value={contactSearchTerm}
                     onChange={(e) => {
-                      setVendorSearchTerm(e.target.value);
-                      isVendorSelected(false);
-                      setSelectedVendor(null);
+                      setContactSearchTerm(e.target.value);
+                      isContactSelected(false);
+                      setSelectedContact(null);
                     }}
-                    placeholder="Search vendors..."
+                    placeholder="Search contacts..."
                     className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  {!vendorSelected && vendorSearchTerm && filteredVendors.length > 0 && (
+                  {!contactSelected && contactSearchTerm && filteredContacts.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                      {filteredVendors.map((vendor) => (
+                      {filteredContacts.map((contact) => (
                         <div
-                          key={vendor.id}
+                          key={contact.id}
                           onClick={() => {
-                            setSelectedVendor(vendor);
-                            setVendorSearchTerm(vendor.name);
-                            isVendorSelected(true);
+                            setSelectedContact(contact);
+                            setContactSearchTerm(contact.name);
+                            isContactSelected(true);
                             setValidationErrors({
                               ...validationErrors,
-                              vendor: undefined
+                              contact: undefined
                             });
                           }}
                           className="px-4 py-2 cursor-pointer hover:bg-gray-100"
                         >
-                          <div className="font-medium">{vendor.name}</div>
-                          {vendor.address && <div className="text-sm text-gray-600">{vendor.address}</div>}
+                          <div className="font-medium">{contact.name}</div>
+                          {contact.address && <div className="text-sm text-gray-600">{contact.address}</div>}
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                {validationErrors.vendor && (
-                  <p className="text-red-500 text-sm mt-1">{validationErrors.vendor}</p>
+                {validationErrors.contact && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.contact}</p>
                 )}
               </div>
-
-
 
               {/* Product Selection */}
               <div className="space-y-4 mb-4">

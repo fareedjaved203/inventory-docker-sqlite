@@ -208,10 +208,10 @@ function SaleInvoicePDF({ sale, shopSettings }) {
               {new Date(sale.saleDate).toLocaleDateString()} {new Date(sale.saleDate).toLocaleTimeString()}
             </Text>
           </View>
-          {sale.vendor && (
+          {sale.contact && (
             <View style={styles.infoRow}>
-              <Text style={styles.label}>Vendor:</Text>
-              <Text style={styles.value}>{sale.vendor.name} {sale.vendor.phoneNumber ? `(${sale.vendor.phoneNumber})` : ''}</Text>
+              <Text style={styles.label}>Contact:</Text>
+              <Text style={styles.value}>{sale.contact.name} {sale.contact.phoneNumber ? `(${sale.contact.phoneNumber})` : ''}</Text>
             </View>
           )}
         </View>
