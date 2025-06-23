@@ -13,7 +13,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
   price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
-  sku: z.string().min(1, "SKU is required"),
+  sku: z.string().optional(),
   quantity: z.number().int().min(0, "Quantity must be non-negative"),
 });
 
@@ -89,7 +89,13 @@ function Products() {
         setIsModalOpen(false);
         setFormData({ name: '', description: '', price: '', sku: '', quantity: '' });
         setIsEditMode(false);
+        setValidationErrors({});
       },
+      onError: (error) => {
+        setValidationErrors({
+          name: error.response?.data?.error || 'Failed to update product'
+        });
+      }
     }
   );
 
@@ -128,7 +134,13 @@ function Products() {
         queryClient.invalidateQueries(['products']);
         setIsModalOpen(false);
         setFormData({ name: '', description: '', price: '', sku: '', quantity: '' });
+        setValidationErrors({});
       },
+      onError: (error) => {
+        setValidationErrors({
+          name: error.response?.data?.error || 'Failed to create product'
+        });
+      }
     }
   );
 
@@ -363,7 +375,13 @@ function Products() {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      // Clear name validation error when user starts typing
+                      if (validationErrors.name) {
+                        setValidationErrors({ ...validationErrors, name: undefined });
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   {validationErrors.name && (
@@ -384,7 +402,7 @@ function Products() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <FaTag className="text-primary-500" /> SKU
+                    <FaTag className="text-primary-500" /> SKU (Optional)
                   </label>
                   <input
                     type="text"

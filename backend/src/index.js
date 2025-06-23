@@ -160,7 +160,7 @@ app.post(
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        return res.status(400).json({ error: 'SKU must be unique' });
+        return res.status(400).json({ error: 'Product name must be unique' });
       }
       res.status(500).json({ error: error.message });
     }
@@ -185,7 +185,7 @@ app.put(
       });
     } catch (error) {
       if (error.code === 'P2002') {
-        return res.status(400).json({ error: 'SKU must be unique' });
+        return res.status(400).json({ error: 'Product name must be unique' });
       }
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Product not found' });

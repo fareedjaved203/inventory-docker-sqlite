@@ -12,10 +12,10 @@ datasource db {
 
 model Product {
   id          String     @id @default(uuid())
-  name        String
+  name        String     @unique
   description String
   price       BigInt
-  sku         String     @unique
+  sku         String?
   quantity    BigInt
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt

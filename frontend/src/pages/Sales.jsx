@@ -259,6 +259,14 @@ function Sales() {
       return;
     }
     
+    if (totalAmount > 100000000) {
+      setValidationErrors({
+        ...validationErrors,
+        total: "Sale total cannot exceed Rs.10 Crores"
+      });
+      return;
+    }
+    
     const saleData = {
       items: saleItems.map(item => ({
         productId: item.productId,
@@ -692,6 +700,13 @@ function Sales() {
                   )}
                 </div>
               </div>
+              
+              {/* Total validation error */}
+              {validationErrors.total && (
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-red-600 text-sm font-medium">{validationErrors.total}</p>
+                </div>
+              )}
 
               <div className="mt-6 flex justify-end space-x-3">
                 <button
