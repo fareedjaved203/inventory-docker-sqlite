@@ -7,13 +7,29 @@
 export function formatPakistaniCurrency(amount, showCurrency = true) {
   if (amount === null || amount === undefined) return showCurrency ? 'Rs.0.00' : '0.00';
   
-  // Convert to number if it's a string
-  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+  // Convert BigInt to number for display
+  let num;
+  if (typeof amount === 'bigint') {
+    num = Number(amount);
+  } else if (typeof amount === 'string') {
+    num = parseFloat(amount);
+  } else {
+    num = amount;
+  }
   
   // Handle invalid input
   if (isNaN(num)) return showCurrency ? 'Rs.0.00' : '0.00';
   
-  // Format with commas for lakhs and crores (1,00,000 format)
+  // For very large amounts, show in crores/lakhs
+  if (num >= 10000000) { // 1 crore
+    const crores = (num / 10000000).toFixed(2);
+    return (showCurrency ? 'Rs.' : '') + crores + ' Cr';
+  } else if (num >= 100000) { // 1 lakh
+    const lakhs = (num / 100000).toFixed(2);
+    return (showCurrency ? 'Rs.' : '') + lakhs + ' L';
+  }
+  
+  // Format with commas for smaller amounts
   const parts = num.toFixed(2).split('.');
   const integerPart = parts[0];
   const decimalPart = parts[1];

@@ -12,7 +12,7 @@ import { FaSearch, FaBoxOpen, FaTag, FaDollarSign, FaWarehouse } from 'react-ico
 const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
-  price: z.number().positive("Price must be positive"),
+  price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
   sku: z.string().min(1, "SKU is required"),
   quantity: z.number().int().min(0, "Quantity must be non-negative"),
 });
@@ -403,8 +403,17 @@ function Products() {
                   <input
                     type="number"
                     step="0.01"
+                    max="100000000"
                     value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (value > 100000000) {
+                        setValidationErrors({...validationErrors, price: "Price cannot exceed Rs.10 Crores"});
+                      } else {
+                        setValidationErrors({...validationErrors, price: undefined});
+                      }
+                      setFormData({ ...formData, price: e.target.value });
+                    }}
                     className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   {validationErrors.price && (

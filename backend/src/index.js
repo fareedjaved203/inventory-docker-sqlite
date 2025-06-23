@@ -28,6 +28,11 @@ const app = express();
 const prisma = new PrismaClient();
 const port = process.env.PORT || 3000;
 
+// Add BigInt serialization support
+BigInt.prototype.toJSON = function() {
+  return Number(this);
+};
+
 app.use(cors());
 app.use(express.json());
 
@@ -70,7 +75,9 @@ app.get('/api/products', validateRequest({ query: querySchema }), async (req, re
     res.json({
       items: items.map(item => ({
         ...item,
-        id: item.id.toString()
+        id: item.id.toString(),
+        price: Number(item.price),
+        quantity: Number(item.quantity)
       })),
       total,
       page,
@@ -102,7 +109,11 @@ app.get('/api/products/low-stock', validateRequest({ query: querySchema }), asyn
     ]);
 
     res.json({
-      items,
+      items: items.map(item => ({
+        ...item,
+        price: Number(item.price),
+        quantity: Number(item.quantity)
+      })),
       total,
       page,
       totalPages: Math.ceil(total / limit),
@@ -123,7 +134,9 @@ app.get('/api/products/:id', async (req, res) => {
     }
     res.json({
       ...product,
-      id: product.id.toString()
+      id: product.id.toString(),
+      price: Number(product.price),
+      quantity: Number(product.quantity)
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -141,7 +154,9 @@ app.post(
       });
       res.status(201).json({
         ...product,
-        id: product.id.toString()
+        id: product.id.toString(),
+        price: Number(product.price),
+        quantity: Number(product.quantity)
       });
     } catch (error) {
       if (error.code === 'P2002') {
@@ -164,7 +179,9 @@ app.put(
       });
       res.json({
         ...product,
-        id: product.id.toString()
+        id: product.id.toString(),
+        price: Number(product.price),
+        quantity: Number(product.quantity)
       });
     } catch (error) {
       if (error.code === 'P2002') {
@@ -236,14 +253,14 @@ app.get('/api/dashboard', async (req, res) => {
           totalAmount: true,
           paidAmount: true
         }
-      }).then(purchases => purchases.filter(p => p.totalAmount > p.paidAmount).length),
+      }).then(purchases => purchases.filter(p => Number(p.totalAmount) > Number(p.paidAmount)).length),
     ]);
 
     res.json({
       totalProducts,
       totalInventory: totalInventory._sum.quantity || 0,
       lowStock,
-      totalSales: totalSales._sum.totalAmount || 0,
+      totalSales: Number(totalSales._sum.totalAmount || 0),
       recentSales,
       pendingPayments,
     });

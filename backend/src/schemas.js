@@ -3,9 +3,9 @@ import { z } from 'zod';
 export const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
-  price: z.number().positive("Price must be positive"),
+  price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
   sku: z.string().min(1, "SKU is required"),
-  quantity: z.number().int().min(0, "Quantity must be non-negative"),
+  quantity: z.number().int().min(0, "Quantity must be non-negative").max(1000000000, "Quantity cannot exceed 1 billion"),
 });
 
 export const productUpdateSchema = productSchema.partial();
@@ -13,13 +13,13 @@ export const productUpdateSchema = productSchema.partial();
 export const saleItemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   quantity: z.number().int().positive("Quantity must be positive"),
-  price: z.number().positive("Price must be positive"),
+  price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
 });
 
 export const saleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "At least one item is required"),
-  totalAmount: z.number().positive("Total amount must be positive"),
-  paidAmount: z.number().min(0, "Paid amount cannot be negative"),
+  totalAmount: z.number().positive("Total amount must be positive").max(100000000, "Total amount cannot exceed Rs.10 Crores"),
+  paidAmount: z.number().min(0, "Paid amount cannot be negative").max(100000000, "Paid amount cannot exceed Rs.10 Crores"),
   contactId: z.string().optional(),
   billNumber: z.string().optional(), // Optional because it will be auto-generated
   saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
@@ -28,14 +28,14 @@ export const saleSchema = z.object({
 export const bulkPurchaseItemSchema = z.object({
   productId: z.string().min(1, "Product is required"),
   quantity: z.number().int().positive("Quantity must be positive"),
-  purchasePrice: z.number().positive("Purchase price must be positive"),
+  purchasePrice: z.number().positive("Purchase price must be positive").max(100000000, "Purchase price cannot exceed Rs.10 Crores"),
 });
 
 export const bulkPurchaseSchema = z.object({
   contactId: z.string().min(1, "Contact is required"),
   items: z.array(bulkPurchaseItemSchema).min(1, "At least one item is required"),
-  totalAmount: z.number().positive("Total amount must be positive"),
-  paidAmount: z.number().min(0, "Paid amount cannot be negative"),
+  totalAmount: z.number().positive("Total amount must be positive").max(100000000, "Total amount cannot exceed Rs.10 Crores"),
+  paidAmount: z.number().min(0, "Paid amount cannot be negative").max(100000000, "Paid amount cannot exceed Rs.10 Crores"),
   invoiceNumber: z.string().optional(),
   purchaseDate: z.string().optional(),
 });

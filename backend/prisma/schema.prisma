@@ -14,9 +14,9 @@ model Product {
   id          String     @id @default(uuid())
   name        String
   description String
-  price       Float
+  price       BigInt
   sku         String     @unique
-  quantity    Int
+  quantity    BigInt
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   SaleItem    SaleItem[]
@@ -26,8 +26,8 @@ model Product {
 model Sale {
   id          String     @id @default(uuid())
   billNumber  String     @unique
-  totalAmount Float
-  paidAmount  Float      @default(0)
+  totalAmount BigInt
+  paidAmount  BigInt     @default(0)
   saleDate    DateTime   @default(now())
   contact     Contact?   @relation(fields: [contactId], references: [id])
   contactId   String?
@@ -38,8 +38,8 @@ model Sale {
 
 model SaleItem {
   id        String   @id @default(uuid())
-  quantity  Int
-  price     Float
+  quantity  BigInt
+  price     BigInt
   sale      Sale     @relation(fields: [saleId], references: [id])
   saleId    String
   product   Product  @relation(fields: [productId], references: [id])
@@ -62,8 +62,8 @@ model Contact {
 model BulkPurchase {
   id          String     @id @default(uuid())
   invoiceNumber String?   @unique
-  totalAmount Float
-  paidAmount  Float
+  totalAmount BigInt
+  paidAmount  BigInt
   purchaseDate DateTime   @default(now())
   contact     Contact    @relation(fields: [contactId], references: [id])
   contactId   String
@@ -74,8 +74,8 @@ model BulkPurchase {
 
 model BulkPurchaseItem {
   id            String       @id @default(uuid())
-  quantity      Int
-  purchasePrice Float
+  quantity      BigInt
+  purchasePrice BigInt
   bulkPurchase  BulkPurchase @relation(fields: [bulkPurchaseId], references: [id])
   bulkPurchaseId String
   product       Product      @relation(fields: [productId], references: [id])

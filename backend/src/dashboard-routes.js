@@ -82,16 +82,16 @@ export function setupDashboardRoutes(app, prisma) {
       ]);
 
       res.json({
-        salesToday: salesToday._sum.totalAmount || 0,
-        salesLast7Days: salesLast7Days._sum.totalAmount || 0,
-        salesLast30Days: salesLast30Days._sum.totalAmount || 0,
-        salesLast365Days: salesLast365Days._sum.totalAmount || 0,
+        salesToday: Number(salesToday._sum.totalAmount || 0),
+        salesLast7Days: Number(salesLast7Days._sum.totalAmount || 0),
+        salesLast30Days: Number(salesLast30Days._sum.totalAmount || 0),
+        salesLast365Days: Number(salesLast365Days._sum.totalAmount || 0),
         totalPurchaseDueAmount: totalPurchaseDueAmount
-          .filter(p => p.totalAmount > p.paidAmount)
-          .reduce((sum, p) => sum + (p.totalAmount - p.paidAmount), 0),
+          .filter(p => Number(p.totalAmount) > Number(p.paidAmount))
+          .reduce((sum, p) => sum + Number(p.totalAmount - p.paidAmount), 0),
         totalSalesDueAmount: totalSalesDueAmount
-          .filter(s => s.totalAmount > s.paidAmount)
-          .reduce((sum, s) => sum + (s.totalAmount - s.paidAmount), 0)
+          .filter(s => Number(s.totalAmount) > Number(s.paidAmount))
+          .reduce((sum, s) => sum + Number(s.totalAmount - s.paidAmount), 0)
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
