@@ -149,6 +149,15 @@ app.post(
   validateRequest({ body: productSchema }),
   async (req, res) => {
     try {
+      // Check for existing product with same name
+      const existingProduct = await prisma.product.findFirst({
+        where: { name: req.body.name }
+      });
+      
+      if (existingProduct) {
+        return res.status(400).json({ error: 'Product name must be unique' });
+      }
+      
       const product = await prisma.product.create({
         data: req.body,
       });
@@ -159,8 +168,17 @@ app.post(
         quantity: Number(product.quantity)
       });
     } catch (error) {
+      console.error('Product creation error:', error);
       if (error.code === 'P2002') {
-        return res.status(400).json({ error: 'Product name must be unique' });
+        console.error('Constraint violation details:', error.meta);
+        const target = error.meta?.target;
+        if (target && target.includes('name')) {
+          return res.status(400).json({ error: 'Product name must be unique' });
+        }
+        if (target && target.includes('sku')) {
+          return res.status(400).json({ error: 'SKU must be unique' });
+        }
+        return res.status(400).json({ error: 'Duplicate value detected' });
       }
       res.status(500).json({ error: error.message });
     }
@@ -173,6 +191,20 @@ app.put(
   validateRequest({ body: productUpdateSchema }),
   async (req, res) => {
     try {
+      // Check for existing product with same name (excluding current product)
+      if (req.body.name) {
+        const existingProduct = await prisma.product.findFirst({
+          where: {
+            name: req.body.name,
+            NOT: { id: req.params.id }
+          }
+        });
+        
+        if (existingProduct) {
+          return res.status(400).json({ error: 'Product name must be unique' });
+        }
+      }
+      
       const product = await prisma.product.update({
         where: { id: req.params.id },
         data: req.body,
@@ -184,8 +216,17 @@ app.put(
         quantity: Number(product.quantity)
       });
     } catch (error) {
+      console.error('Product update error:', error);
       if (error.code === 'P2002') {
-        return res.status(400).json({ error: 'Product name must be unique' });
+        console.error('Constraint violation details:', error.meta);
+        const target = error.meta?.target;
+        if (target && target.includes('name')) {
+          return res.status(400).json({ error: 'Product name must be unique' });
+        }
+        if (target && target.includes('sku')) {
+          return res.status(400).json({ error: 'SKU must be unique' });
+        }
+        return res.status(400).json({ error: 'Duplicate value detected' });
       }
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Product not found' });

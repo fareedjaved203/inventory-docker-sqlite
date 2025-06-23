@@ -25,6 +25,7 @@ COPY init-db.js ./
 COPY migrate-vendor-to-contact.js ./
 COPY migrate-bigint.js ./
 COPY reset-db.js ./
+COPY remove-sku-constraint.js ./
 
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist

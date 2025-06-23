@@ -379,7 +379,9 @@ function Products() {
                       setFormData({ ...formData, name: e.target.value });
                       // Clear name validation error when user starts typing
                       if (validationErrors.name) {
-                        setValidationErrors({ ...validationErrors, name: undefined });
+                        const newErrors = { ...validationErrors };
+                        delete newErrors.name;
+                        setValidationErrors(newErrors);
                       }
                     }}
                     className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
