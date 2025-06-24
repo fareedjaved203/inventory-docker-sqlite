@@ -26,6 +26,7 @@ COPY migrate-vendor-to-contact.js ./
 COPY migrate-bigint.js ./
 COPY reset-db.js ./
 COPY remove-sku-constraint.js ./
+COPY ensure-data-dir.js ./
 
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -34,7 +35,7 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 RUN npx prisma generate
 
 # Create SQLite database directory with proper permissions
-RUN mkdir -p /app/prisma/data && touch /app/prisma/data/inventory.db
+RUN mkdir -p /app/prisma/data
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
@@ -46,4 +47,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "echo 'Initializing database...' && node init-db.js && echo 'Starting application...' && node src/index.js"]
+CMD ["sh", "-c", "node ensure-data-dir.js && echo 'Initializing database...' && node init-db.js && echo 'Starting application...' && node src/index.js"]
