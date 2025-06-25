@@ -14,9 +14,10 @@ function PurchaseDetailsModal({ purchase, isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-lg w-full max-w-2xl">
-        <div className="flex justify-between items-start mb-6">
-          <h2 className="text-2xl font-bold">Purchase Details</h2>
+      <div className="bg-white p-6 rounded-lg w-full max-w-2xl h-[90vh] flex flex-col">
+        <div className="flex-shrink-0">
+          <div className="flex justify-between items-start mb-6">
+            <h2 className="text-2xl font-bold">Purchase Details</h2>
           <div className="flex gap-2">
             <PDFDownloadLink
               document={<PurchaseInvoicePDF purchase={purchase} shopSettings={shopSettings} />}
@@ -42,8 +43,9 @@ function PurchaseDetailsModal({ purchase, isOpen, onClose }) {
             </button>
           </div>
         </div>
-
-        <div className="space-y-6">
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-6">
           <div>
             <h3 className="text-lg font-medium mb-2">Purchase Information</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -121,6 +123,7 @@ function PurchaseDetailsModal({ purchase, isOpen, onClose }) {
                 </tfoot>
               </table>
             </div>
+          </div>
           </div>
         </div>
       </div>

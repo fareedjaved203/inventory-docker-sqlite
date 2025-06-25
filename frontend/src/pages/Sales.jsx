@@ -135,12 +135,14 @@ function Sales() {
     {
       onSuccess: () => {
         queryClient.invalidateQueries(['sales']);
+        queryClient.invalidateQueries(['products']); // Refresh products to show updated stock
         setIsModalOpen(false);
         setSaleItems([]);
         setSelectedProduct(null);
         setQuantity("");
         setSelectedContact(null);
         setSaleDate('');
+        setTempStockUpdates({});
       },
     }
   );
@@ -169,16 +171,20 @@ function Sales() {
 
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [tempStockUpdates, setTempStockUpdates] = useState({});
 
   useEffect(() => {
     if (products) {
       setFilteredProducts(
         products.filter(product =>
           product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
-        )
+        ).map(product => ({
+          ...product,
+          quantity: product.quantity - (tempStockUpdates[product.id] || 0)
+        }))
       );
     }
-  }, [products, productSearchTerm]);
+  }, [products, productSearchTerm, tempStockUpdates]);
 
   const handleAddItem = () => {
     if (!selectedProduct || !quantity) {
@@ -209,6 +215,13 @@ function Sales() {
     };
 
     setSaleItems([...saleItems, newItem]);
+    
+    // Update temporary stock
+    setTempStockUpdates(prev => ({
+      ...prev,
+      [selectedProduct.id]: (prev[selectedProduct.id] || 0) + quantityNum
+    }));
+    
     setSelectedProduct(null);
     setQuantity("");
     setProductSearchTerm("");
@@ -217,7 +230,23 @@ function Sales() {
   };
 
   const handleRemoveItem = (index) => {
+    const removedItem = saleItems[index];
     setSaleItems(saleItems.filter((_, i) => i !== index));
+    
+    // Restore temporary stock
+    setTempStockUpdates(prev => {
+      const newUpdates = { ...prev };
+      const currentReduction = newUpdates[removedItem.productId] || 0;
+      const newReduction = currentReduction - removedItem.quantity;
+      
+      if (newReduction <= 0) {
+        delete newUpdates[removedItem.productId];
+      } else {
+        newUpdates[removedItem.productId] = newReduction;
+      }
+      
+      return newUpdates;
+    });
   };
 
   const calculateTotal = () => {
@@ -530,11 +559,14 @@ function Sales() {
       {/* New Sale Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl border border-gray-200">
-            <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2">
-              {isEditMode ? "Edit Sale" : "New Sale"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md h-[90vh] shadow-xl border border-gray-200 flex flex-col">
+            <div className="flex-shrink-0">
+              <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2">
+                {isEditMode ? "Edit Sale" : "New Sale"}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <form id="sale-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-4 mb-4">
                 <div className="flex flex-col gap-4">
                   <div className="flex-1">
@@ -708,36 +740,39 @@ function Sales() {
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setSaleItems([]);
-                    setSelectedProduct(null);
-                    setQuantity("");
-                    setPaidAmount(0);
-                    setSelectedContact(null);
-                    setSaleDate('');
-                    setValidationErrors({});
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={Object.values(validationErrors).some(error => error !== undefined)}
-                  className={`px-4 py-2 text-white rounded shadow-sm ${
-                    Object.values(validationErrors).some(error => error !== undefined)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800'
-                  }`}
-                >
-                  {isEditMode ? "Update Sale" : "Create Sale"}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
+            <div className="flex-shrink-0 mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSaleItems([]);
+                  setSelectedProduct(null);
+                  setQuantity("");
+                  setPaidAmount(0);
+                  setSelectedContact(null);
+                  setSaleDate('');
+                  setValidationErrors({});
+                  setTempStockUpdates({});
+                }}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="sale-form"
+                disabled={Object.values(validationErrors).some(error => error !== undefined)}
+                className={`px-4 py-2 text-white rounded shadow-sm ${
+                  Object.values(validationErrors).some(error => error !== undefined)
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800'
+                }`}
+              >
+                {isEditMode ? "Update Sale" : "Create Sale"}
+              </button>
+            </div>
           </div>
         </div>
       )}
