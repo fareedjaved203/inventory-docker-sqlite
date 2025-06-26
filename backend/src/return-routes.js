@@ -155,12 +155,14 @@ export function setupReturnRoutes(app, prisma) {
   app.post('/api/returns/:returnId/pay-credit', async (req, res) => {
     try {
       const { returnId } = req.params;
+      const { amount } = req.body;
       
       // Update the return record to mark refund as paid
       const updatedReturn = await prisma.saleReturn.update({
         where: { id: returnId },
         data: {
           refundPaid: true,
+          refundAmount: amount || undefined,
           refundDate: new Date()
         }
       });
@@ -168,6 +170,39 @@ export function setupReturnRoutes(app, prisma) {
       res.json(updatedReturn);
     } catch (error) {
       console.error('Error marking refund as paid:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Pay direct credit refund
+  app.post('/api/sales/:saleId/pay-credit', async (req, res) => {
+    try {
+      const { saleId } = req.params;
+      const { amount } = req.body;
+      
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ error: 'Valid refund amount is required' });
+      }
+      
+      // Create a dummy return record for tracking the refund
+      const returnNumber = `REF-${Date.now().toString().slice(-6)}`;
+      
+      const creditReturn = await prisma.saleReturn.create({
+        data: {
+          returnNumber,
+          totalAmount: 0, // No items returned
+          refundAmount: amount,
+          refundPaid: true,
+          refundDate: new Date(),
+          reason: 'Credit balance refund',
+          saleId,
+          items: { create: [] } // No items
+        }
+      });
+      
+      res.json(creditReturn);
+    } catch (error) {
+      console.error('Error processing credit refund:', error);
       res.status(500).json({ error: error.message });
     }
   });

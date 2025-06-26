@@ -533,8 +533,9 @@ function Sales() {
                   {(() => {
                     const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
                     const returnedAmount = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + Number(ret.totalAmount || 0), 0) : 0;
+                    const totalRefunded = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0) : 0;
                     const netAmount = originalAmount - returnedAmount;
-                    const balance = netAmount - Number(sale.paidAmount || 0);
+                    const balance = netAmount - Number(sale.paidAmount || 0) + totalRefunded;
                     
                     if (balance > 0) {
                       return (
@@ -555,7 +556,25 @@ function Sales() {
                         </div>
                       );
                     } else {
-                      return <span className="text-green-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>;
+                      // Check if there were returns and refunds
+                      const hasReturns = Array.isArray(sale.returns) && sale.returns.length > 0;
+                      const hasRefunds = hasReturns && sale.returns.some(ret => ret.refundPaid);
+                      
+                      return (
+                        <div className="flex items-center">
+                          <span className="text-green-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>
+                          {hasRefunds && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-gradient-to-r from-blue-50 to-blue-100 text-blue-800 rounded-full border border-blue-200 shadow-sm">
+                              Refunded
+                            </span>
+                          )}
+                          {!hasRefunds && (
+                            <span className="ml-2 px-2 py-1 text-xs bg-gradient-to-r from-green-50 to-green-100 text-green-800 rounded-full border border-green-200 shadow-sm">
+                              Settled
+                            </span>
+                          )}
+                        </div>
+                      );
                     }
                   })()}
                 </td>

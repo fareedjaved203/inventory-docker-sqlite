@@ -1,12 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import SaleInvoicePDF from './SaleInvoicePDF';
 
 function SaleDetailsModal({ sale, isOpen, onClose }) {
-  const [creditPayment, setCreditPayment] = useState('');
+  const [creditPayment, setCreditPayment] = useState({});
+  const [processingRefund, setProcessingRefund] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const queryClient = useQueryClient();
+  
+  // Reset state when modal opens with a new sale
+  useEffect(() => {
+    if (isOpen && sale) {
+      setCreditPayment({});
+      setSuccessMessage('');
+    }
+  }, [isOpen, sale?.id]);
   
   const { data: shopSettings } = useQuery(['shop-settings'], async () => {
     const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/shop-settings`);
@@ -15,16 +25,74 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
 
   const payCredit = useMutation(
     async (paymentData) => {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/returns/${paymentData.returnId}/pay-credit`,
-        { amount: paymentData.amount }
-      );
+      let response;
+      
+      // Set processing state for this specific return
+      if (paymentData.returnId) {
+        setCreditPayment(prev => ({
+          ...prev,
+          [paymentData.returnId]: {
+            amount: paymentData.amount,
+            processing: true
+          }
+        }));
+        
+        // Pay refund for specific return
+        response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/returns/${paymentData.returnId}/pay-credit`,
+          { amount: paymentData.amount }
+        );
+      } else if (paymentData.saleId) {
+        // Set processing state for direct credit refund
+        setCreditPayment(prev => ({
+          ...prev,
+          saleRefund: {
+            amount: paymentData.amount,
+            processing: true
+          }
+        }));
+        
+        // Pay direct credit refund
+        response = await axios.post(
+          `${import.meta.env.VITE_API_URL}/api/sales/${paymentData.saleId}/pay-credit`,
+          { amount: paymentData.amount }
+        );
+      }
+      
       return response.data;
     },
     {
-      onSuccess: () => {
+      onSuccess: (data, variables) => {
         queryClient.invalidateQueries(['sales']);
-        setCreditPayment('');
+        
+        // Reset processing state but keep the amount for UI feedback
+        if (variables.returnId) {
+          setCreditPayment(prev => ({
+            ...prev,
+            [variables.returnId]: {
+              amount: variables.amount,
+              processing: false,
+              completed: true
+            }
+          }));
+        } else {
+          setCreditPayment(prev => ({
+            ...prev,
+            saleRefund: {
+              amount: variables.amount,
+              processing: false,
+              completed: true
+            }
+          }));
+        }
+        
+        const amount = variables.amount;
+        setSuccessMessage(`Refund of Rs.${amount} processed successfully!`);
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 5000);
       },
     }
   );
@@ -34,6 +102,14 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
   };
 
   if (!isOpen || !sale) return null;
+
+  // Check if any individual return has been refunded
+  const hasIndividualRefunds = Object.keys(creditPayment).some(key => 
+    key !== 'saleRefund' && creditPayment[key]?.completed
+  );
+
+  // Check if full credit has been refunded
+  const hasFullRefund = creditPayment.saleRefund?.completed;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -111,6 +187,19 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
         </div>
         </div>
         <div className="flex-1 overflow-y-auto">
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
+              <span>{successMessage}</span>
+              <button 
+                onClick={() => setSuccessMessage('')}
+                className="text-green-700 hover:text-green-900"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          )}
           <div className="space-y-6">
           <div>
             <h3 className="text-lg font-medium mb-2">#{sale.billNumber}</h3>
@@ -207,14 +296,26 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                     </td>
                   </tr>
                   {sale.returns?.length > 0 && (
-                    <tr>
-                      <td colSpan="3" className="px-6 py-4 text-right font-medium text-red-600">
-                        Total Returned
-                      </td>
-                      <td className="px-6 py-4 text-right font-medium text-red-600">
-                        -Rs.{sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0).toFixed(2)}
-                      </td>
-                    </tr>
+                    <>
+                      <tr>
+                        <td colSpan="3" className="px-6 py-4 text-right font-medium text-red-600">
+                          Total Returned
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-red-600">
+                          -Rs.{sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0).toFixed(2)}
+                        </td>
+                      </tr>
+                      {sale.returns.some(ret => ret.refundPaid) && (
+                        <tr>
+                          <td colSpan="3" className="px-6 py-4 text-right font-medium text-green-600">
+                            Total Refunded
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium text-green-600">
+                            Rs.{sale.returns.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0).toFixed(2)}
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   )}
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-medium">
@@ -226,7 +327,16 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                   </tr>
                   {(() => {
                     const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
-                    const balance = netAmount - sale.paidAmount;
+                    const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
+                    const balance = netAmount - sale.paidAmount + totalRefunded;
+                    
+                    // Check if all credit has been refunded
+                    const allCreditRefunded = hasFullRefund || 
+                      (hasIndividualRefunds && 
+                       Object.keys(creditPayment)
+                         .filter(key => key !== 'saleRefund')
+                         .reduce((sum, key) => sum + parseFloat(creditPayment[key]?.amount || 0), 0) >= Math.abs(balance));
+                    
                     return balance > 0 ? (
                       <tr>
                         <td colSpan="3" className="px-6 py-4 text-right font-medium">
@@ -240,17 +350,83 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                         </td>
                       </tr>
                     ) : balance < 0 ? (
-                      <tr>
-                        <td colSpan="3" className="px-6 py-4 text-right font-medium">
-                          Credit Balance
-                        </td>
-                        <td className="px-6 py-4 text-right font-medium text-green-600">
-                          Rs.{Math.abs(balance).toFixed(2)}
-                          <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
-                            Overpaid
-                          </span>
-                        </td>
-                      </tr>
+                      <>
+                        <tr>
+                          <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                            Credit Balance
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium text-green-600">
+                            Rs.{Math.abs(balance).toFixed(2)}
+                            <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                              {allCreditRefunded ? 'Refunded' : 'Overpaid'}
+                            </span>
+                          </td>
+                        </tr>
+                        {!allCreditRefunded && (
+                          <tr>
+                            <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                              Refund Credit
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {creditPayment.saleRefund?.completed ? (
+                                  <div className="text-sm text-green-600 font-medium">
+                                    Refund of Rs.{creditPayment.saleRefund.amount} processed
+                                  </div>
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={Math.abs(balance)}
+                                    step="0.01"
+                                    placeholder="Amount"
+                                    value={creditPayment.saleRefund?.amount || ''}
+                                    onChange={(e) => {
+                                      const value = parseFloat(e.target.value) || 0;
+                                      if (value <= Math.abs(balance)) {
+                                        setCreditPayment(prev => ({
+                                          ...prev,
+                                          saleRefund: {
+                                            ...prev.saleRefund,
+                                            amount: e.target.value
+                                          }
+                                        }));
+                                      }
+                                    }}
+                                    disabled={creditPayment.saleRefund?.processing || hasIndividualRefunds}
+                                    className="w-24 py-1 px-2 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                                  />
+                                )}
+                                {!creditPayment.saleRefund?.completed && (
+                                  <>
+                                  {hasIndividualRefunds && (
+                                    <div className="text-xs text-orange-600 mb-1">
+                                      Individual returns already refunded
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      const refundAmount = parseFloat(creditPayment.saleRefund?.amount) || Math.abs(balance);
+                                      if (refundAmount <= Math.abs(balance)) {
+                                        // Create a dummy return for refund
+                                        payCredit.mutate({
+                                          saleId: sale.id,
+                                          amount: refundAmount
+                                        });
+                                      }
+                                    }}
+                                    disabled={creditPayment.saleRefund?.processing || hasIndividualRefunds}
+                                    className="px-2 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                                  >
+                                    {creditPayment.saleRefund?.processing ? 'Processing...' : 'Pay Refund'}
+                                  </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </>
                     ) : (
                       <tr>
                         <td colSpan="3" className="px-6 py-4 text-right font-medium">
@@ -315,15 +491,64 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                             }`}>
                               {returnRecord.refundPaid ? 'Paid' : (returnRecord.refundAmount > 0 ? 'Pending' : 'No Refund')}
                             </div>
-                            {!returnRecord.refundPaid && returnRecord.refundAmount > 0 && (
-                              <button
-                                onClick={() => handleMarkRefundPaid(returnRecord.id)}
-                                className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                              >
-                                Mark Paid
-                              </button>
-                            )}
                           </div>
+                          
+                          {!returnRecord.refundPaid && (
+                            <div className="mt-2 flex items-center gap-1">
+                              {creditPayment[returnRecord.id]?.completed ? (
+                                <div className="text-xs text-green-600 font-medium">
+                                  Refund of Rs.{creditPayment[returnRecord.id].amount} processed
+                                </div>
+                              ) : (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={returnRecord.totalAmount}
+                                  step="0.01"
+                                  placeholder="Amount"
+                                  value={creditPayment[returnRecord.id]?.amount || ''}
+                                  onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0;
+                                    if (value <= returnRecord.totalAmount) {
+                                      setCreditPayment(prev => ({
+                                        ...prev,
+                                        [returnRecord.id]: {
+                                          ...prev[returnRecord.id],
+                                          amount: e.target.value
+                                        }
+                                      }));
+                                    }
+                                  }}
+                                  disabled={creditPayment[returnRecord.id]?.processing || hasFullRefund}
+                                  className="w-20 text-xs py-1 px-2 border border-gray-300 rounded disabled:bg-gray-100"
+                                />
+                              )}
+                              {!creditPayment[returnRecord.id]?.completed && (
+                                <>
+                                {hasFullRefund && (
+                                  <div className="text-xs text-orange-600">
+                                    Full credit already refunded
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    const refundAmount = parseFloat(creditPayment[returnRecord.id]?.amount) || returnRecord.totalAmount;
+                                    if (refundAmount <= returnRecord.totalAmount) {
+                                      payCredit.mutate({
+                                        returnId: returnRecord.id,
+                                        amount: refundAmount
+                                      });
+                                    }
+                                  }}
+                                  disabled={creditPayment[returnRecord.id]?.processing || hasFullRefund}
+                                  className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+                                >
+                                  {creditPayment[returnRecord.id]?.processing ? 'Processing...' : 'Pay'}
+                                </button>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
