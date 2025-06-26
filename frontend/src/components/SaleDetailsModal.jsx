@@ -10,7 +10,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
     return response.data;
   });
 
-  if (!isOpen) return null;
+  if (!isOpen || !sale) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
@@ -19,6 +19,49 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-2xl font-bold">Sale Details</h2>
           <div className="flex gap-2">
+            <button
+              onClick={() => {
+                onClose();
+                if (window.openReturnModal) {
+                  window.openReturnModal(sale, 'partial');
+                }
+              }}
+              disabled={!sale.items.some(item => (item.remainingQuantity || item.quantity) > 0)}
+              className={`px-3 py-2 rounded-lg shadow-sm flex items-center gap-2 text-sm ${
+                !sale.items?.some(item => (item.remainingQuantity || item.quantity) > 0)
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+              </svg>
+              Return Items
+            </button>
+            <button
+              onClick={() => {
+                onClose();
+                if (window.openReturnModal) {
+                  window.openReturnModal(sale, 'full');
+                }
+              }}
+              disabled={!sale.items.some(item => (item.remainingQuantity || item.quantity) > 0)}
+              className={`px-3 py-2 rounded-lg shadow-sm flex items-center gap-2 text-sm ${
+                !sale.items.some(item => (item.remainingQuantity || item.quantity) > 0)
+                  ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-orange-600 to-orange-700 text-white hover:from-orange-700 hover:to-orange-800'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              Return Entire Sale
+            </button>
+            {!sale.items?.some(item => (item.remainingQuantity || item.quantity) > 0) && (
+              <div className="text-sm text-gray-500 italic">
+                No items available to return
+              </div>
+            )}
             <PDFDownloadLink
               document={<SaleInvoicePDF sale={sale} shopSettings={shopSettings} />}
               fileName={`invoice-${sale.billNumber}.pdf`}
@@ -70,7 +113,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
 
           <div>
             <h3 className="text-lg font-medium mb-2">Items</h3>
-            <div className="bg-gray-50 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 rounded-lg overflow-hidden overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-100">
                   <tr>
@@ -81,19 +124,44 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sale.items.map((item, index) => (
-                    <tr key={index}>
+                  {sale.items?.map((item, index) => (
+                    <tr key={index} className={item.returnedQuantity > 0 ? 'bg-red-50' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {item.product.name}
+                        <div className="flex items-center gap-2">
+                          {item.product?.name}
+                          {item.returnedQuantity > 0 && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                              </svg>
+                              {item.returnedQuantity} Returned
+                            </span>
+                          )}
+                          {item.returnedQuantity === item.quantity && (
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                              Fully Returned
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        {item.quantity}
+                        <div>{item.quantity}</div>
+                        {item.returnedQuantity > 0 && (
+                          <div className="text-xs text-red-600">
+                            -{item.returnedQuantity}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                         Rs.{item.price.toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        Rs.{(item.price * item.quantity).toFixed(2)}
+                        <div>Rs.{(item.price * item.quantity).toFixed(2)}</div>
+                        {item.returnedQuantity > 0 && (
+                          <div className="text-xs text-red-600">
+                            -Rs.{(item.price * item.returnedQuantity).toFixed(2)}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -132,6 +200,47 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
               </table>
             </div>
           </div>
+
+          {/* Returned Items Section */}
+          {sale.returns?.length > 0 && (
+            <div>
+              <h3 className="text-lg font-medium mb-2 text-red-800">Returned Items</h3>
+              <div className="bg-red-50 rounded-lg overflow-hidden overflow-x-auto border border-red-200">
+                <table className="min-w-full divide-y divide-red-200">
+                  <thead className="bg-red-100">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase">Return #</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase">Items</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-red-700 uppercase">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-red-200">
+                    {sale.returns.map((returnRecord, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-800">
+                          {returnRecord.returnNumber}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {new Date(returnRecord.returnDate).toLocaleDateString('en-GB')}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-700">
+                          {returnRecord.items?.map((item, itemIndex) => (
+                            <div key={itemIndex} className="text-sm">
+                              {item.product?.name} × {item.quantity}
+                            </div>
+                          ))}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-red-800">
+                          Rs.{returnRecord.totalAmount.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       </div>

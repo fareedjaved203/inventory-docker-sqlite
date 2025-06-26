@@ -6,6 +6,7 @@ import Products from './pages/Products';
 import Sales from './pages/Sales';
 import Contacts from './pages/Contacts';
 import BulkPurchasing from './pages/BulkPurchasing';
+import Returns from './pages/Returns';
 import Settings from './pages/Settings';
 import NotFound from './pages/NotFound';
 
@@ -24,6 +25,7 @@ function App() {
               <Route path="/sales" element={<Sales />} />
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/bulk" element={<BulkPurchasing />} />
+              <Route path="/returns" element={<Returns />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

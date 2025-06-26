@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { FaChevronLeft, FaChevronRight, FaChartLine, FaBoxOpen, FaMoneyBillWave, FaBuilding, FaShoppingCart, FaCog } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaChartLine, FaBoxOpen, FaMoneyBillWave, FaBuilding, FaShoppingCart, FaUndo, FaCog } from 'react-icons/fa';
 
 function Sidebar() {
   const location = useLocation();
@@ -23,6 +23,7 @@ function Sidebar() {
     { path: '/sales', label: 'Sales', icon: <FaMoneyBillWave /> },
     { path: '/contacts', label: 'Contacts', icon: <FaBuilding /> },
     { path: '/bulk', label: 'Bulk Purchasing', icon: <FaShoppingCart /> },
+    { path: '/returns', label: 'Returns', icon: <FaUndo /> },
     { path: '/settings', label: 'Settings', icon: <FaCog /> },
   ];
 

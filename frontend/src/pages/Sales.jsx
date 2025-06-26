@@ -6,6 +6,7 @@ import { z } from 'zod';
 import DeleteModal from '../components/DeleteModal';
 import TableSkeleton from '../components/TableSkeleton';
 import SaleDetailsModal from '../components/SaleDetailsModal';
+import ReturnModal from '../components/ReturnModal';
 import { debounce } from 'lodash';
 import GenerateTodayInvoiceButton from '../components/GenerateTodayInvoiceButton';
 import { formatPakistaniCurrency } from '../utils/formatCurrency';
@@ -44,6 +45,9 @@ function Sales() {
   const [productSelected, isProductSelected] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [selectedSale, setSelectedSale] = useState(null);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [saleForReturn, setSaleForReturn] = useState(null);
+  const [returnType, setReturnType] = useState('partial');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
@@ -259,6 +263,18 @@ function Sales() {
     setTotalAmount(total);
   }, [saleItems]);
 
+  // Global function for opening return modal from SaleDetailsModal
+  useEffect(() => {
+    window.openReturnModal = (sale, type = 'partial') => {
+      setSaleForReturn(sale);
+      setReturnType(type);
+      setReturnModalOpen(true);
+    };
+    return () => {
+      delete window.openReturnModal;
+    };
+  }, []);
+
   const handleEdit = (sale) => {
     setEditingSale(sale);
     setSaleItems(sale.items.map(item => ({
@@ -440,7 +456,7 @@ function Sales() {
       </div>
 
       <div className="bg-white shadow-md rounded-lg overflow-x-auto border border-gray-100">
-        <table className="min-w-full divide-y divide-gray-200">
+        <table className="w-full divide-y divide-gray-200" style={{minWidth: '800px'}}>
           <thead className="bg-gradient-to-r from-primary-50 to-primary-100">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Bill Number</th>
@@ -470,12 +486,19 @@ function Sales() {
                     <span className="text-gray-400 text-sm">-</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-gray-700">
-                  {sale.items.map((item, index) => (
-                    <div key={index} className="text-sm">
-                      {item.product.name} x {item.quantity}
-                    </div>
-                  ))}
+                <td className="px-6 py-4 text-gray-700" style={{minWidth: '300px'}}>
+                  <div className="space-y-1">
+                    {sale.items.map((item, index) => (
+                      <div key={index} className="text-sm flex items-center gap-2 flex-wrap">
+                        <span className="whitespace-nowrap">{item.product.name} x {item.quantity}</span>
+                        {item.returnedQuantity > 0 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 whitespace-nowrap">
+                            -{item.returnedQuantity} returned
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-800">
                   {formatPakistaniCurrency(sale.totalAmount)}
@@ -798,6 +821,18 @@ function Sales() {
           setSelectedSale(null);
         }}
         sale={selectedSale}
+      />
+
+      {/* Return Modal */}
+      <ReturnModal
+        isOpen={returnModalOpen}
+        onClose={() => {
+          setReturnModalOpen(false);
+          setSaleForReturn(null);
+          setReturnType('partial');
+        }}
+        sale={saleForReturn}
+        returnType={returnType}
       />
     </div>
   );

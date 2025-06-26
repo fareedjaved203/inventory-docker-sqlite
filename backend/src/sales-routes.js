@@ -240,7 +240,7 @@ export function setupSalesRoutes(app, prisma) {
         }
       }
 
-      const [total, items] = await Promise.all([
+      const [total, salesData] = await Promise.all([
         prisma.sale.count({ where }),
         prisma.sale.findMany({
           where,
@@ -254,9 +254,36 @@ export function setupSalesRoutes(app, prisma) {
               },
             },
             contact: true,
+            returns: {
+              include: {
+                items: true
+              }
+            }
           },
         }),
       ]);
+      
+      // Add returned quantities to each sale
+      const items = salesData.map(sale => {
+        const returnedQuantities = {};
+        sale.returns.forEach(returnRecord => {
+          returnRecord.items.forEach(returnItem => {
+            if (!returnedQuantities[returnItem.productId]) {
+              returnedQuantities[returnItem.productId] = 0;
+            }
+            returnedQuantities[returnItem.productId] += Number(returnItem.quantity);
+          });
+        });
+        
+        return {
+          ...sale,
+          items: sale.items.map(item => ({
+            ...item,
+            returnedQuantity: returnedQuantities[item.productId] || 0,
+            remainingQuantity: Number(item.quantity) - (returnedQuantities[item.productId] || 0)
+          }))
+        };
+      });
 
       res.json({
         items,
@@ -282,12 +309,39 @@ export function setupSalesRoutes(app, prisma) {
             },
           },
           contact: true,
+          returns: {
+            include: {
+              items: true
+            }
+          }
         },
       });
       if (!sale) {
         return res.status(404).json({ error: 'Sale not found' });
       }
-      res.json(sale);
+      
+      // Calculate returned quantities for each product
+      const returnedQuantities = {};
+      sale.returns.forEach(returnRecord => {
+        returnRecord.items.forEach(returnItem => {
+          if (!returnedQuantities[returnItem.productId]) {
+            returnedQuantities[returnItem.productId] = 0;
+          }
+          returnedQuantities[returnItem.productId] += Number(returnItem.quantity);
+        });
+      });
+      
+      // Add returned quantities to sale items
+      const saleWithReturns = {
+        ...sale,
+        items: sale.items.map(item => ({
+          ...item,
+          returnedQuantity: returnedQuantities[item.productId] || 0,
+          remainingQuantity: Number(item.quantity) - (returnedQuantities[item.productId] || 0)
+        }))
+      };
+      
+      res.json(saleWithReturns);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
