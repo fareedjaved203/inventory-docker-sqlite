@@ -159,6 +159,28 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 4,
   },
+  statusTag: {
+    padding: '3 6',
+    borderRadius: 4,
+    fontSize: 10,
+    marginLeft: 5,
+  },
+  statusPaid: {
+    backgroundColor: '#d1fae5',
+    color: '#065f46',
+  },
+  statusDue: {
+    backgroundColor: '#fef3c7',
+    color: '#92400e',
+  },
+  statusCredit: {
+    backgroundColor: '#dbeafe',
+    color: '#1e40af',
+  },
+  statusRefunded: {
+    backgroundColor: '#e0f2fe',
+    color: '#0369a1',
+  },
 });
 
 function SaleInvoicePDF({ sale, shopSettings }) {
@@ -173,6 +195,33 @@ function SaleInvoicePDF({ sale, shopSettings }) {
   }
   if (shopSettings?.brand3) {
     brands.push(shopSettings.brand3 + (shopSettings.brand3Registered ? '®' : ''));
+  }
+  
+  // Calculate payment status
+  const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+  const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
+  const balance = netAmount - sale.paidAmount + totalRefunded;
+  
+  // Determine status
+  let status = '';
+  let statusStyle = {};
+  
+  if (balance > 0) {
+    status = 'PAYMENT DUE';
+    statusStyle = styles.statusDue;
+  } else if (balance < 0) {
+    // Check if all refunds are paid
+    const allRefundsPaid = sale.returns?.every(ret => ret.refundPaid) || false;
+    if (allRefundsPaid && totalRefunded > 0) {
+      status = 'REFUNDED';
+      statusStyle = styles.statusRefunded;
+    } else {
+      status = 'CREDIT BALANCE';
+      statusStyle = styles.statusCredit;
+    }
+  } else {
+    status = 'FULLY PAID';
+    statusStyle = styles.statusPaid;
   }
   
   return (
@@ -214,6 +263,12 @@ function SaleInvoicePDF({ sale, shopSettings }) {
               <Text style={styles.value}>{sale.contact.name} {sale.contact.phoneNumber ? `(${sale.contact.phoneNumber})` : ''}</Text>
             </View>
           )}
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Status:</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <Text style={[styles.statusTag, statusStyle]}>{status}</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.table}>
@@ -275,13 +330,17 @@ function SaleInvoicePDF({ sale, shopSettings }) {
               <Text style={styles.totalLabel}>Total Returned:</Text>
               <Text>{formatPakistaniCurrencyPDF(sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0))}</Text>
             </View>
+            {totalRefunded > 0 && (
+              <View style={styles.total}>
+                <Text style={styles.totalLabel}>Total Refunded:</Text>
+                <Text>{formatPakistaniCurrencyPDF(totalRefunded)}</Text>
+              </View>
+            )}
             <View style={styles.total}>
               <Text style={styles.totalLabel}>Net Total After Returns:</Text>
-              <Text>{formatPakistaniCurrencyPDF((sale.originalTotalAmount || sale.totalAmount) - sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0))}</Text>
+              <Text>{formatPakistaniCurrencyPDF(netAmount)}</Text>
             </View>
             {(() => {
-              const netAmount = (sale.originalTotalAmount || sale.totalAmount) - sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0);
-              const balance = netAmount - sale.paidAmount;
               return balance > 0 ? (
                 <View style={styles.total}>
                   <Text style={styles.totalLabel}>Net Balance Due:</Text>
@@ -289,7 +348,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
                 </View>
               ) : balance < 0 ? (
                 <View style={styles.total}>
-                  <Text style={styles.totalLabel}>Credit Balance (Overpaid):</Text>
+                  <Text style={styles.totalLabel}>Credit Balance:</Text>
                   <Text>{formatPakistaniCurrencyPDF(Math.abs(balance))}</Text>
                 </View>
               ) : (

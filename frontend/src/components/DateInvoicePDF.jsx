@@ -165,7 +165,29 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#f3f4f6',
     padding: 5,
-  }
+  },
+  statusTag: {
+    padding: '3 6',
+    borderRadius: 4,
+    fontSize: 10,
+    marginLeft: 5,
+  },
+  statusPaid: {
+    backgroundColor: '#d1fae5',
+    color: '#065f46',
+  },
+  statusDue: {
+    backgroundColor: '#fef3c7',
+    color: '#92400e',
+  },
+  statusCredit: {
+    backgroundColor: '#dbeafe',
+    color: '#1e40af',
+  },
+  statusRefunded: {
+    backgroundColor: '#e0f2fe',
+    color: '#0369a1',
+  },
 });
 
 function DateInvoicePDF({ date, sales, shopSettings }) {
@@ -219,62 +241,94 @@ function DateInvoicePDF({ date, sales, shopSettings }) {
           </View>
         </View>
 
-        {sales.map((sale, saleIndex) => (
-          <View key={saleIndex} style={styles.saleSection}>
-            <Text style={styles.saleHeader}>
-              Sale #{sale.billNumber}
-              {sale.vendor && ` - Vendor: ${sale.vendor.name} ${sale.vendor.phoneNumber ? `(${sale.vendor.phoneNumber})` : ''}`}
-            </Text>
-            
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={styles.col1}>Item</Text>
-                <Text style={styles.col2}>Quantity</Text>
-                <Text style={styles.col3}>Price</Text>
-                <Text style={styles.col4}>Subtotal</Text>
-              </View>
-
-              {sale.items.map((item, index) => (
-                <View key={index} style={styles.tableRow}>
-                  <Text style={styles.col1}>{item.product.name}</Text>
-                  <Text style={styles.col2}>{item.quantity}</Text>
-                  <Text style={styles.col3}>{formatPakistaniCurrencyPDF(item.price)}</Text>
-                  <Text style={styles.col4}>
-                    {formatPakistaniCurrencyPDF(item.price * item.quantity)}
-                  </Text>
-                </View>
-              ))}
-
-              <View style={styles.total}>
-                <Text style={styles.totalLabel}>Sale Total:</Text>
-                <Text>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
+        {sales.map((sale, saleIndex) => {
+          // Calculate payment status for each sale
+          const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+          const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
+          const balance = netAmount - sale.paidAmount + totalRefunded;
+          
+          // Determine status
+          let status = '';
+          let statusStyle = {};
+          
+          if (balance > 0) {
+            status = 'PAYMENT DUE';
+            statusStyle = styles.statusDue;
+          } else if (balance < 0) {
+            // Check if all refunds are paid
+            const allRefundsPaid = sale.returns?.every(ret => ret.refundPaid) || false;
+            if (allRefundsPaid && totalRefunded > 0) {
+              status = 'REFUNDED';
+              statusStyle = styles.statusRefunded;
+            } else {
+              status = 'CREDIT BALANCE';
+              statusStyle = styles.statusCredit;
+            }
+          } else {
+            status = 'FULLY PAID';
+            statusStyle = styles.statusPaid;
+          }
+          
+          return (
+            <View key={saleIndex} style={styles.saleSection}>
+              <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: '#f3f4f6', padding: 5, marginBottom: 10}}>
+                <Text style={{fontSize: 16, flex: 1}}>
+                  Sale #{sale.billNumber}
+                  {sale.contact && ` - ${sale.contact.name}`}
+                </Text>
+                <Text style={[styles.statusTag, statusStyle]}>{status}</Text>
               </View>
               
-              {/* Returns Section for this sale */}
-              {sale.returns && sale.returns.length > 0 && (
-                <View style={styles.table}>
-                  <Text style={[styles.saleHeader, { fontSize: 12, marginTop: 10, marginBottom: 5, backgroundColor: '#fef2f2' }]}>Returns for this Sale</Text>
-                  <View style={styles.tableHeader}>
-                    <Text style={styles.col1}>Return #</Text>
-                    <Text style={styles.col2}>Items</Text>
-                    <Text style={styles.col3}>Date</Text>
-                    <Text style={styles.col4}>Amount</Text>
-                  </View>
-                  {sale.returns.map((returnRecord, returnIndex) => (
-                    <View key={returnIndex} style={styles.tableRow}>
-                      <Text style={styles.col1}>{returnRecord.returnNumber}</Text>
-                      <Text style={styles.col2}>
-                        {returnRecord.items.map(item => `${item.product?.name || 'Unknown'} x${item.quantity}`).join(', ')}
-                      </Text>
-                      <Text style={styles.col3}>{new Date(returnRecord.returnDate).toLocaleDateString()}</Text>
-                      <Text style={styles.col4}>{formatPakistaniCurrencyPDF(returnRecord.totalAmount)}</Text>
-                    </View>
-                  ))}
+              <View style={styles.table}>
+                <View style={styles.tableHeader}>
+                  <Text style={styles.col1}>Item</Text>
+                  <Text style={styles.col2}>Quantity</Text>
+                  <Text style={styles.col3}>Price</Text>
+                  <Text style={styles.col4}>Subtotal</Text>
                 </View>
-              )}
+
+                {sale.items.map((item, index) => (
+                  <View key={index} style={styles.tableRow}>
+                    <Text style={styles.col1}>{item.product.name}</Text>
+                    <Text style={styles.col2}>{item.quantity}</Text>
+                    <Text style={styles.col3}>{formatPakistaniCurrencyPDF(item.price)}</Text>
+                    <Text style={styles.col4}>
+                      {formatPakistaniCurrencyPDF(item.price * item.quantity)}
+                    </Text>
+                  </View>
+                ))}
+
+                <View style={styles.total}>
+                  <Text style={styles.totalLabel}>Sale Total:</Text>
+                  <Text>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
+                </View>
+                
+                {/* Returns Section for this sale */}
+                {sale.returns && sale.returns.length > 0 && (
+                  <View style={styles.table}>
+                    <Text style={[styles.saleHeader, { fontSize: 12, marginTop: 10, marginBottom: 5, backgroundColor: '#fef2f2' }]}>Returns for this Sale</Text>
+                    <View style={styles.tableHeader}>
+                      <Text style={styles.col1}>Return #</Text>
+                      <Text style={styles.col2}>Items</Text>
+                      <Text style={styles.col3}>Date</Text>
+                      <Text style={styles.col4}>Amount</Text>
+                    </View>
+                    {sale.returns.map((returnRecord, returnIndex) => (
+                      <View key={returnIndex} style={styles.tableRow}>
+                        <Text style={styles.col1}>{returnRecord.returnNumber}</Text>
+                        <Text style={styles.col2}>
+                          {returnRecord.items.map(item => `${item.product?.name || 'Unknown'} x${item.quantity}`).join(', ')}
+                        </Text>
+                        <Text style={styles.col3}>{new Date(returnRecord.returnDate).toLocaleDateString()}</Text>
+                        <Text style={styles.col4}>{formatPakistaniCurrencyPDF(returnRecord.totalAmount)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
 
         <View style={styles.total}>
           <Text style={styles.totalLabel}>Grand Total:</Text>
