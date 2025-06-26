@@ -1,14 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import SaleInvoicePDF from './SaleInvoicePDF';
 
 function SaleDetailsModal({ sale, isOpen, onClose }) {
+  const [creditPayment, setCreditPayment] = useState('');
+  const queryClient = useQueryClient();
+  
   const { data: shopSettings } = useQuery(['shop-settings'], async () => {
     const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/shop-settings`);
     return response.data;
   });
+
+  const payCredit = useMutation(
+    async (paymentData) => {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/returns/${paymentData.returnId}/pay-credit`,
+        { amount: paymentData.amount }
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['sales']);
+        setCreditPayment('');
+      },
+    }
+  );
+
+  const handleMarkRefundPaid = (returnId) => {
+    payCredit.mutate({ returnId, amount: 0 });
+  };
 
   if (!isOpen || !sale) return null;
 
@@ -169,10 +192,10 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-medium">
-                      Total
+                      Original Total
                     </td>
                     <td className="px-6 py-4 text-right font-medium">
-                      Rs.{sale.totalAmount.toFixed(2)}
+                      Rs.{(sale.originalTotalAmount || sale.totalAmount).toFixed(2)}
                     </td>
                   </tr>
                   <tr>
@@ -183,19 +206,64 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                       Rs.{sale.paidAmount.toFixed(2)}
                     </td>
                   </tr>
-                  {sale.totalAmount > sale.paidAmount && (
+                  {sale.returns?.length > 0 && (
                     <tr>
-                      <td colSpan="3" className="px-6 py-4 text-right font-medium">
-                        Balance
+                      <td colSpan="3" className="px-6 py-4 text-right font-medium text-red-600">
+                        Total Returned
                       </td>
-                      <td className="px-6 py-4 text-right font-medium text-yellow-600">
-                        Rs.{(sale.totalAmount - sale.paidAmount).toFixed(2)}
-                        <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
-                          Payment Due
-                        </span>
+                      <td className="px-6 py-4 text-right font-medium text-red-600">
+                        -Rs.{sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0).toFixed(2)}
                       </td>
                     </tr>
                   )}
+                  <tr>
+                    <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                      Net Amount After Returns
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium">
+                      Rs.{((sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0)).toFixed(2)}
+                    </td>
+                  </tr>
+                  {(() => {
+                    const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+                    const balance = netAmount - sale.paidAmount;
+                    return balance > 0 ? (
+                      <tr>
+                        <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                          Updated Balance Due
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-yellow-600">
+                          Rs.{balance.toFixed(2)}
+                          <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
+                            Payment Due
+                          </span>
+                        </td>
+                      </tr>
+                    ) : balance < 0 ? (
+                      <tr>
+                        <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                          Credit Balance
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-green-600">
+                          Rs.{Math.abs(balance).toFixed(2)}
+                          <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Overpaid
+                          </span>
+                        </td>
+                      </tr>
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                          Status
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-green-600">
+                          <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                            Fully Paid
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tfoot>
               </table>
             </div>
@@ -213,6 +281,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                       <th className="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-red-700 uppercase">Items</th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-red-700 uppercase">Amount</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-red-700 uppercase">Refund</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-red-200">
@@ -233,6 +302,28 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-red-800">
                           Rs.{returnRecord.totalAmount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          <div className="text-sm font-medium text-gray-900">
+                            Rs.{(returnRecord.refundAmount || 0).toFixed(2)}
+                          </div>
+                          <div className="flex items-center gap-2 justify-end">
+                            <div className={`text-xs px-2 py-1 rounded-full ${
+                              returnRecord.refundPaid 
+                                ? 'bg-green-100 text-green-800' 
+                                : (returnRecord.refundAmount > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600')
+                            }`}>
+                              {returnRecord.refundPaid ? 'Paid' : (returnRecord.refundAmount > 0 ? 'Pending' : 'No Refund')}
+                            </div>
+                            {!returnRecord.refundPaid && returnRecord.refundAmount > 0 && (
+                              <button
+                                onClick={() => handleMarkRefundPaid(returnRecord.id)}
+                                className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                              >
+                                Mark Paid
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -84,6 +84,7 @@ export function setupSalesRoutes(app, prisma) {
             data: {
               billNumber,
               totalAmount: req.body.totalAmount,
+              originalTotalAmount: req.body.totalAmount,
               paidAmount: req.body.paidAmount || 0,
               saleDate,
               ...(req.body.contactId && { contact: { connect: { id: req.body.contactId } } }),
@@ -141,55 +142,198 @@ export function setupSalesRoutes(app, prisma) {
     }
   );
 
+  // Get sales with credit balance (overpaid)
+  app.get('/api/sales/credit-balance', validateRequest({ query: querySchema }), async (req, res) => {
+    try {
+      const { page = 1, limit = 10, search = '' } = req.query;
+
+      // Get all sales with returns to calculate credit balance
+      const allSales = await prisma.sale.findMany({
+        include: {
+          returns: {
+            include: {
+              items: {
+                include: {
+                  product: true
+                }
+              }
+            }
+          },
+          items: {
+            include: {
+              product: true,
+            },
+          },
+          contact: true,
+        }
+      });
+      
+      // Filter sales with credit balance (overpaid)
+      const creditSales = allSales.filter(sale => {
+        const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+        const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
+        const netAmount = originalAmount - returnedAmount;
+        const balance = netAmount - Number(sale.paidAmount);
+        return balance < 0; // Credit balance (overpaid)
+      });
+      
+      // Apply search filter
+      const filteredSales = search ? 
+        creditSales.filter(sale => sale.billNumber.includes(search)) : 
+        creditSales;
+      
+      // Apply pagination
+      const total = filteredSales.length;
+      const items = filteredSales
+        .slice((page - 1) * limit, page * limit)
+        .map(sale => {
+          const returnedQuantities = {};
+          (sale.returns || []).forEach(returnRecord => {
+            (returnRecord.items || []).forEach(returnItem => {
+              if (!returnedQuantities[returnItem.productId]) {
+                returnedQuantities[returnItem.productId] = 0;
+              }
+              returnedQuantities[returnItem.productId] += Number(returnItem.quantity);
+            });
+          });
+          
+          return {
+            ...sale,
+            items: sale.items.map(item => ({
+              ...item,
+              returnedQuantity: returnedQuantities[item.productId] || 0,
+              remainingQuantity: Number(item.quantity) - (returnedQuantities[item.productId] || 0)
+            }))
+          };
+        });
+
+      res.json({
+        items,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      });
+    } catch (error) {
+      console.error('Error fetching credit balance sales:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get sales with pending payments
   app.get('/api/sales/pending-payments', validateRequest({ query: querySchema }), async (req, res) => {
     try {
       const { page = 1, limit = 10, search = '' } = req.query;
 
+      // Get all sales with returns to calculate net amounts
       const allSales = await prisma.sale.findMany({
-        select: {
-          id: true,
-          totalAmount: true,
-          paidAmount: true
+        include: {
+          returns: true
         }
       });
       
-      const pendingSaleIds = allSales
-        .filter(sale => sale.totalAmount > sale.paidAmount)
-        .map(sale => sale.id);
+      // Filter sales with pending payments based on net amounts after returns
+      const pendingSales = allSales.filter(sale => {
+        const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+        const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
+        const netAmount = originalAmount - returnedAmount;
+        const balance = netAmount - Number(sale.paidAmount);
+        return balance > 0; // Has pending payment
+      });
       
-      const where = {
-        id: {
-          in: pendingSaleIds
-        }
-      };
+      // Apply search filter
+      const filteredSales = search ? 
+        pendingSales.filter(sale => sale.billNumber.includes(search)) : 
+        pendingSales;
       
-      if (search) {
-        where.OR = [
-          { billNumber: { contains: search } }
-        ];
-      }
+      // Apply pagination
+      const total = filteredSales.length;
+      const items = filteredSales
+        .slice((page - 1) * limit, page * limit)
+        .map(sale => {
+          const returnedQuantities = {};
+          if (sale.returns && Array.isArray(sale.returns)) {
+            sale.returns.forEach(returnRecord => {
+              if (returnRecord && returnRecord.items && Array.isArray(returnRecord.items)) {
+                returnRecord.items.forEach(returnItem => {
+                  if (returnItem && returnItem.productId) {
+                    if (!returnedQuantities[returnItem.productId]) {
+                      returnedQuantities[returnItem.productId] = 0;
+                    }
+                    returnedQuantities[returnItem.productId] += Number(returnItem.quantity || 0);
+                  }
+                });
+              }
+            });
+          }
+          
+          return {
+            ...sale,
+            items: sale.items?.map(item => ({
+              ...item,
+              returnedQuantity: returnedQuantities[item.productId] || 0,
+              remainingQuantity: Number(item.quantity) - (returnedQuantities[item.productId] || 0)
+            })) || []
+          };
+        });
 
-      const [total, items] = await Promise.all([
-        prisma.sale.count({ where }),
-        prisma.sale.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: { saleDate: 'desc' },
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
+      // Get full sale data for the filtered items
+      const saleIds = items.map(sale => sale.id);
+      const fullSales = await prisma.sale.findMany({
+        where: {
+          id: {
+            in: saleIds
+          }
+        },
+        include: {
+          items: {
+            include: {
+              product: true,
             },
-            contact: true,
           },
-        }),
-      ]);
+          contact: true,
+          returns: {
+            include: {
+              items: {
+                include: {
+                  product: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { saleDate: 'desc' }
+      });
+
+      // Add returned quantities to full sales data
+      const finalItems = fullSales.map(sale => {
+        const returnedQuantities = {};
+        if (sale.returns && Array.isArray(sale.returns)) {
+          sale.returns.forEach(returnRecord => {
+            if (returnRecord && returnRecord.items && Array.isArray(returnRecord.items)) {
+              returnRecord.items.forEach(returnItem => {
+                if (returnItem && returnItem.productId) {
+                  if (!returnedQuantities[returnItem.productId]) {
+                    returnedQuantities[returnItem.productId] = 0;
+                  }
+                  returnedQuantities[returnItem.productId] += Number(returnItem.quantity || 0);
+                }
+              });
+            }
+          });
+        }
+        
+        return {
+          ...sale,
+          items: sale.items?.map(item => ({
+            ...item,
+            returnedQuantity: returnedQuantities[item.productId] || 0,
+            remainingQuantity: Number(item.quantity) - (returnedQuantities[item.productId] || 0)
+          })) || []
+        };
+      });
 
       res.json({
-        items,
+        items: finalItems,
         total,
         page,
         totalPages: Math.ceil(total / limit),
@@ -256,7 +400,11 @@ export function setupSalesRoutes(app, prisma) {
             contact: true,
             returns: {
               include: {
-                items: true
+                items: {
+                  include: {
+                    product: true
+                  }
+                }
               }
             }
           },
@@ -266,22 +414,28 @@ export function setupSalesRoutes(app, prisma) {
       // Add returned quantities to each sale
       const items = salesData.map(sale => {
         const returnedQuantities = {};
-        sale.returns.forEach(returnRecord => {
-          returnRecord.items.forEach(returnItem => {
-            if (!returnedQuantities[returnItem.productId]) {
-              returnedQuantities[returnItem.productId] = 0;
+        if (sale.returns && Array.isArray(sale.returns)) {
+          sale.returns.forEach(returnRecord => {
+            if (returnRecord && returnRecord.items && Array.isArray(returnRecord.items)) {
+              returnRecord.items.forEach(returnItem => {
+                if (returnItem && returnItem.productId) {
+                  if (!returnedQuantities[returnItem.productId]) {
+                    returnedQuantities[returnItem.productId] = 0;
+                  }
+                  returnedQuantities[returnItem.productId] += Number(returnItem.quantity || 0);
+                }
+              });
             }
-            returnedQuantities[returnItem.productId] += Number(returnItem.quantity);
           });
-        });
+        }
         
         return {
           ...sale,
-          items: sale.items.map(item => ({
+          items: sale.items?.map(item => ({
             ...item,
             returnedQuantity: returnedQuantities[item.productId] || 0,
             remainingQuantity: Number(item.quantity) - (returnedQuantities[item.productId] || 0)
-          }))
+          })) || []
         };
       });
 
@@ -311,7 +465,11 @@ export function setupSalesRoutes(app, prisma) {
           contact: true,
           returns: {
             include: {
-              items: true
+              items: {
+                include: {
+                  product: true
+                }
+              }
             }
           }
         },
@@ -322,14 +480,20 @@ export function setupSalesRoutes(app, prisma) {
       
       // Calculate returned quantities for each product
       const returnedQuantities = {};
-      sale.returns.forEach(returnRecord => {
-        returnRecord.items.forEach(returnItem => {
-          if (!returnedQuantities[returnItem.productId]) {
-            returnedQuantities[returnItem.productId] = 0;
+      if (sale.returns && Array.isArray(sale.returns)) {
+        sale.returns.forEach(returnRecord => {
+          if (returnRecord && returnRecord.items && Array.isArray(returnRecord.items)) {
+            returnRecord.items.forEach(returnItem => {
+              if (returnItem && returnItem.productId) {
+                if (!returnedQuantities[returnItem.productId]) {
+                  returnedQuantities[returnItem.productId] = 0;
+                }
+                returnedQuantities[returnItem.productId] += Number(returnItem.quantity || 0);
+              }
+            });
           }
-          returnedQuantities[returnItem.productId] += Number(returnItem.quantity);
         });
-      });
+      }
       
       // Add returned quantities to sale items
       const saleWithReturns = {
@@ -449,7 +613,12 @@ export function setupSalesRoutes(app, prisma) {
         const sale = await prisma.sale.findUnique({
           where: { id: req.params.id },
           include: {
-            items: true
+            items: true,
+            returns: {
+              include: {
+                items: true
+              }
+            }
           }
         });
 
@@ -457,6 +626,7 @@ export function setupSalesRoutes(app, prisma) {
           throw new Error('Sale not found');
         }
 
+        // Restore product quantities from sale items
         for (const item of sale.items) {
           await prisma.product.update({
             where: { id: item.productId },
@@ -468,10 +638,46 @@ export function setupSalesRoutes(app, prisma) {
           });
         }
 
+        // Adjust product quantities for returned items (remove them from stock if they were added back)
+        if (sale.returns && Array.isArray(sale.returns)) {
+          for (const returnRecord of sale.returns) {
+            if (returnRecord && returnRecord.items && Array.isArray(returnRecord.items)) {
+              for (const returnItem of returnRecord.items) {
+                if (returnItem && returnItem.productId) {
+                  await prisma.product.update({
+                    where: { id: returnItem.productId },
+                    data: {
+                      quantity: {
+                        decrement: returnItem.quantity
+                      }
+                    }
+                  });
+                }
+              }
+            }
+          }
+
+          // Delete return items first
+          for (const returnRecord of sale.returns) {
+            if (returnRecord && returnRecord.id) {
+              await prisma.saleReturnItem.deleteMany({
+                where: { saleReturnId: returnRecord.id }
+              });
+            }
+          }
+        }
+
+        // Delete returns
+        await prisma.saleReturn.deleteMany({
+          where: { saleId: req.params.id }
+        });
+
+        // Delete sale items
         await prisma.saleItem.deleteMany({
           where: { saleId: req.params.id }
         });
 
+        // Delete the sale
         await prisma.sale.delete({
           where: { id: req.params.id }
         });

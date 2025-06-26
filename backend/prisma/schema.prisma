@@ -28,6 +28,7 @@ model Sale {
   id          String     @id @default(uuid())
   billNumber  String     @unique
   totalAmount BigInt
+  originalTotalAmount BigInt?
   paidAmount  BigInt     @default(0)
   saleDate    DateTime   @default(now())
   contact     Contact?   @relation(fields: [contactId], references: [id])
@@ -92,6 +93,9 @@ model SaleReturn {
   totalAmount BigInt
   returnDate  DateTime   @default(now())
   reason      String?
+  refundAmount BigInt    @default(0)
+  refundPaid  Boolean    @default(false)
+  refundDate  DateTime?
   sale        Sale       @relation(fields: [saleId], references: [id])
   saleId      String
   items       SaleReturnItem[]

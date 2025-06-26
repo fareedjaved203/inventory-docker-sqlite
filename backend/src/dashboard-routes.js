@@ -22,7 +22,8 @@ export function setupDashboardRoutes(app, prisma) {
         salesLast30Days,
         salesLast365Days,
         totalPurchaseDueAmount,
-        totalSalesDueAmount
+        totalSalesDueAmount,
+        totalDueCredits
       ] = await Promise.all([
         // Sales Today
         prisma.sale.aggregate({
@@ -72,13 +73,19 @@ export function setupDashboardRoutes(app, prisma) {
           }
         }),
         
-        // Total Due Amount (Sales) - Get all and filter in JS
+        // Total Due Amount (Sales) - Get all with returns and filter in JS
         prisma.sale.findMany({
-          select: {
-            totalAmount: true,
-            paidAmount: true
+          include: {
+            returns: true
           }
-        })
+        }),
+        
+        // Total Due Credits (Sales with credit balance)
+        prisma.sale.findMany({
+          include: {
+            returns: true
+          }
+        }).catch(() => [])
       ]);
 
       res.json({
@@ -90,8 +97,23 @@ export function setupDashboardRoutes(app, prisma) {
           .filter(p => Number(p.totalAmount) > Number(p.paidAmount))
           .reduce((sum, p) => sum + Number(p.totalAmount - p.paidAmount), 0),
         totalSalesDueAmount: totalSalesDueAmount
-          .filter(s => Number(s.totalAmount) > Number(s.paidAmount))
-          .reduce((sum, s) => sum + Number(s.totalAmount - s.paidAmount), 0)
+          .map(sale => {
+            const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+            const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
+            const netAmount = originalAmount - returnedAmount;
+            const balance = netAmount - Number(sale.paidAmount);
+            return balance > 0 ? balance : 0;
+          })
+          .reduce((sum, due) => sum + due, 0),
+        totalDueCredits: (totalDueCredits || [])
+          .map(sale => {
+            const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+            const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
+            const netAmount = originalAmount - returnedAmount;
+            const balance = netAmount - Number(sale.paidAmount);
+            return balance < 0 ? Math.abs(balance) : 0;
+          })
+          .reduce((sum, credit) => sum + credit, 0)
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);

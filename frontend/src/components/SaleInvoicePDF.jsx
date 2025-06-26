@@ -236,9 +236,32 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           ))}
         </View>
 
+        {/* Returns Section */}
+        {sale.returns && sale.returns.length > 0 && (
+          <View style={styles.table}>
+            <Text style={[styles.title, { fontSize: 14, marginTop: 20, marginBottom: 10 }]}>RETURNED ITEMS</Text>
+            <View style={styles.tableHeader}>
+              <Text style={styles.col1}>Return #</Text>
+              <Text style={styles.col2}>Date</Text>
+              <Text style={styles.col3}>Items</Text>
+              <Text style={styles.col4}>Amount</Text>
+            </View>
+            {sale.returns.map((returnRecord, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={styles.col1}>{returnRecord.returnNumber}</Text>
+                <Text style={styles.col2}>{new Date(returnRecord.returnDate).toLocaleDateString()}</Text>
+                <Text style={styles.col3}>
+                  {returnRecord.items.map(item => `${item.product?.name || 'Unknown Product'} x${item.quantity}`).join(', ')}
+                </Text>
+                <Text style={styles.col4}>Rs.{formatPakistaniCurrencyPDF(returnRecord.totalAmount, false)}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         <View style={styles.total}>
-          <Text style={styles.totalLabel}>Total:</Text>
-          <Text>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
+          <Text style={styles.totalLabel}>Original Total:</Text>
+          <Text>{formatPakistaniCurrencyPDF(sale.originalTotalAmount || sale.totalAmount)}</Text>
         </View>
         
         <View style={styles.total}>
@@ -246,7 +269,40 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           <Text>{formatPakistaniCurrencyPDF(sale.paidAmount)}</Text>
         </View>
         
-        {sale.totalAmount > sale.paidAmount && (
+        {sale.returns && sale.returns.length > 0 && (
+          <View>
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>Total Returned:</Text>
+              <Text>{formatPakistaniCurrencyPDF(sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0))}</Text>
+            </View>
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>Net Total After Returns:</Text>
+              <Text>{formatPakistaniCurrencyPDF((sale.originalTotalAmount || sale.totalAmount) - sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0))}</Text>
+            </View>
+            {(() => {
+              const netAmount = (sale.originalTotalAmount || sale.totalAmount) - sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0);
+              const balance = netAmount - sale.paidAmount;
+              return balance > 0 ? (
+                <View style={styles.total}>
+                  <Text style={styles.totalLabel}>Net Balance Due:</Text>
+                  <Text>{formatPakistaniCurrencyPDF(balance)}</Text>
+                </View>
+              ) : balance < 0 ? (
+                <View style={styles.total}>
+                  <Text style={styles.totalLabel}>Credit Balance (Overpaid):</Text>
+                  <Text>{formatPakistaniCurrencyPDF(Math.abs(balance))}</Text>
+                </View>
+              ) : (
+                <View style={styles.total}>
+                  <Text style={styles.totalLabel}>Status:</Text>
+                  <Text>Fully Paid</Text>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        
+        {(!sale.returns || sale.returns.length === 0) && sale.totalAmount > sale.paidAmount && (
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Balance Due:</Text>
             <Text>{formatPakistaniCurrencyPDF(sale.totalAmount - sale.paidAmount)}</Text>

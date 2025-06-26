@@ -88,9 +88,9 @@ function Returns() {
                   {new Date(returnItem.returnDate).toLocaleDateString('en-GB')}
                 </td>
                 <td className="px-6 py-4 text-gray-700">
-                  {returnItem.items.map((item, index) => (
+                  {returnItem.items?.map((item, index) => (
                     <div key={index} className="text-sm">
-                      {item.product.name} × {item.quantity}
+                      {item.product?.name || 'Unknown Product'} × {item.quantity}
                     </div>
                   ))}
                 </td>

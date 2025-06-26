@@ -8,6 +8,7 @@ function ReturnModal({ sale, isOpen, onClose, returnType = 'partial' }) {
   const [returnItems, setReturnItems] = useState([]);
   const [reason, setReason] = useState('');
   const [removeFromStock, setRemoveFromStock] = useState(false);
+  const [refundAmount, setRefundAmount] = useState(0);
 
   // Auto-select all items for full return
   useEffect(() => {
@@ -97,7 +98,8 @@ function ReturnModal({ sale, isOpen, onClose, returnType = 'partial' }) {
         price: item.price
       })),
       reason,
-      removeFromStock
+      removeFromStock,
+      refundAmount
     };
 
     createReturn.mutate(returnData);

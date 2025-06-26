@@ -249,6 +249,29 @@ function DateInvoicePDF({ date, sales, shopSettings }) {
                 <Text style={styles.totalLabel}>Sale Total:</Text>
                 <Text>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
               </View>
+              
+              {/* Returns Section for this sale */}
+              {sale.returns && sale.returns.length > 0 && (
+                <View style={styles.table}>
+                  <Text style={[styles.saleHeader, { fontSize: 12, marginTop: 10, marginBottom: 5, backgroundColor: '#fef2f2' }]}>Returns for this Sale</Text>
+                  <View style={styles.tableHeader}>
+                    <Text style={styles.col1}>Return #</Text>
+                    <Text style={styles.col2}>Items</Text>
+                    <Text style={styles.col3}>Date</Text>
+                    <Text style={styles.col4}>Amount</Text>
+                  </View>
+                  {sale.returns.map((returnRecord, returnIndex) => (
+                    <View key={returnIndex} style={styles.tableRow}>
+                      <Text style={styles.col1}>{returnRecord.returnNumber}</Text>
+                      <Text style={styles.col2}>
+                        {returnRecord.items.map(item => `${item.product?.name || 'Unknown'} x${item.quantity}`).join(', ')}
+                      </Text>
+                      <Text style={styles.col3}>{new Date(returnRecord.returnDate).toLocaleDateString()}</Text>
+                      <Text style={styles.col4}>{formatPakistaniCurrencyPDF(returnRecord.totalAmount)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
         ))}

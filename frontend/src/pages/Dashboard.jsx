@@ -37,6 +37,10 @@ function Dashboard() {
     navigate('/sales', { state: { showPendingPayments: true } });
   };
 
+  const handleDueCreditsClick = () => {
+    navigate('/sales', { state: { showCreditBalance: true } });
+  };
+
   if (isLoading || isLoadingStats) return <DashboardSkeleton />;
 
   return (
@@ -130,50 +134,65 @@ function Dashboard() {
 
       {/* Financial Overview */}
       <h2 className="text-xl font-semibold mb-4 text-primary-700">Financial Overview</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-gradient-to-br from-accent-50 to-accent-100 p-6 rounded-lg shadow-md border border-accent-200">
           <div className="flex items-center justify-between">
             <h2 className="text-accent-600 text-sm font-medium">Total Sales</h2>
             <div className="p-2 bg-accent-500 text-white rounded-full">
-              <RiMoneyDollarCircleFill className="text-2xl" />
+              <RiMoneyDollarCircleFill className="text-xl" />
             </div>
           </div>
-          <p className="text-2xl md:text-3xl font-bold mt-2 text-accent-700 truncate" title={formatPakistaniCurrency(data?.totalSales || 0)}>
+          <p className="text-xl md:text-2xl font-bold mt-2 text-accent-700 truncate" title={formatPakistaniCurrency(data?.totalSales || 0)}>
             {formatPakistaniCurrency(data?.totalSales || 0)}
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div 
-            className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border border-red-200 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={handlePendingPurchasePaymentsClick}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-red-600 text-sm font-medium">Purchase Due Amount</h2>
-              <div className="p-2 bg-red-500 text-white rounded-full">
-                <MdOutlinePayments className="text-2xl" />
-              </div>
+        
+        <div 
+          className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-lg shadow-md border border-red-200 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={handlePendingPurchasePaymentsClick}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-red-600 text-sm font-medium">Purchase Due</h2>
+            <div className="p-2 bg-red-500 text-white rounded-full">
+              <MdOutlinePayments className="text-xl" />
             </div>
-            <p className="text-2xl md:text-3xl font-bold mt-2 text-red-700 truncate" title={formatPakistaniCurrency(salesStats?.totalPurchaseDueAmount || 0)}>
-              {formatPakistaniCurrency(salesStats?.totalPurchaseDueAmount || 0)}
-            </p>
-            <p className="text-sm text-red-600 mt-2">Click to view pending purchase payments</p>
           </div>
-          
-          <div 
-            className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg shadow-md border border-yellow-200 cursor-pointer hover:shadow-lg transition-shadow"
-            onClick={handlePendingSalePaymentsClick}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-yellow-600 text-sm font-medium">Sales Due Amount</h2>
-              <div className="p-2 bg-yellow-500 text-white rounded-full">
-                <MdOutlinePayments className="text-2xl" />
-              </div>
+          <p className="text-xl md:text-2xl font-bold mt-2 text-red-700 truncate" title={formatPakistaniCurrency(salesStats?.totalPurchaseDueAmount || 0)}>
+            {formatPakistaniCurrency(salesStats?.totalPurchaseDueAmount || 0)}
+          </p>
+          <p className="text-xs text-red-600 mt-2">Click to view</p>
+        </div>
+        
+        <div 
+          className="bg-gradient-to-br from-yellow-50 to-yellow-100 p-6 rounded-lg shadow-md border border-yellow-200 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={handlePendingSalePaymentsClick}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-yellow-600 text-sm font-medium">Sales Due</h2>
+            <div className="p-2 bg-yellow-500 text-white rounded-full">
+              <MdOutlinePayments className="text-xl" />
             </div>
-            <p className="text-2xl md:text-3xl font-bold mt-2 text-yellow-700 truncate" title={formatPakistaniCurrency(salesStats?.totalSalesDueAmount || 0)}>
-              {formatPakistaniCurrency(salesStats?.totalSalesDueAmount || 0)}
-            </p>
-            <p className="text-sm text-yellow-600 mt-2">Click to view pending sale payments</p>
           </div>
+          <p className="text-xl md:text-2xl font-bold mt-2 text-yellow-700 truncate" title={formatPakistaniCurrency(salesStats?.totalSalesDueAmount || 0)}>
+            {formatPakistaniCurrency(salesStats?.totalSalesDueAmount || 0)}
+          </p>
+          <p className="text-xs text-yellow-600 mt-2">Click to view</p>
+        </div>
+        
+        <div 
+          className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg shadow-md border border-green-200 cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={handleDueCreditsClick}
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="text-green-600 text-sm font-medium">Due Credits</h2>
+            <div className="p-2 bg-green-500 text-white rounded-full">
+              <RiMoneyDollarCircleFill className="text-xl" />
+            </div>
+          </div>
+          <p className="text-xl md:text-2xl font-bold mt-2 text-green-700 truncate" title={formatPakistaniCurrency(salesStats?.totalDueCredits || 0)}>
+            {formatPakistaniCurrency(salesStats?.totalDueCredits || 0)}
+          </p>
+          <p className="text-xs text-green-600 mt-2">Click to view</p>
         </div>
       </div>
 

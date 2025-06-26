@@ -54,6 +54,7 @@ function Sales() {
   const [selectedContact, setSelectedContact] = useState(null);
   const [saleDate, setSaleDate] = useState('');
   const [showPendingPayments, setShowPendingPayments] = useState(location?.state?.showPendingPayments || false);
+  const [showCreditBalance, setShowCreditBalance] = useState(location?.state?.showCreditBalance || false);
 
   const updateSale = useMutation(
     async (updatedSale) => {
@@ -104,16 +105,19 @@ function Sales() {
     return response.data.items;
   });
 
-  // Reset page when switching between all sales and pending payments
+  // Reset page when switching between views
   useEffect(() => {
     setCurrentPage(1);
-  }, [showPendingPayments]);
+  }, [showPendingPayments, showCreditBalance]);
 
   // Fetch sales
   const { data: sales, isLoading } = useQuery(
-    ['sales', selectedDate ? `${selectedDate.split('-')[2]}/${selectedDate.split('-')[1]}/${selectedDate.split('-')[0]}` : debouncedSearchTerm, showPendingPayments],
+    ['sales', selectedDate ? `${selectedDate.split('-')[2]}/${selectedDate.split('-')[1]}/${selectedDate.split('-')[0]}` : debouncedSearchTerm, showPendingPayments, showCreditBalance],
     async () => {
-      const endpoint = showPendingPayments ? '/api/sales/pending-payments' : '/api/sales';
+      let endpoint = '/api/sales';
+      if (showPendingPayments) endpoint = '/api/sales/pending-payments';
+      if (showCreditBalance) endpoint = '/api/sales/credit-balance';
+      
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}${endpoint}?page=${currentPage}&limit=${itemsPerPage}&search=${selectedDate ? `${selectedDate.split('-')[2]}/${selectedDate.split('-')[1]}/${selectedDate.split('-')[0]}` : debouncedSearchTerm}`
       );
@@ -182,7 +186,7 @@ function Sales() {
       setFilteredProducts(
         products.filter(product =>
           product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
-        ).map(product => ({
+        )?.map(product => ({
           ...product,
           quantity: product.quantity - (tempStockUpdates[product.id] || 0)
         }))
@@ -277,7 +281,7 @@ function Sales() {
 
   const handleEdit = (sale) => {
     setEditingSale(sale);
-    setSaleItems(sale.items.map(item => ({
+    setSaleItems(sale.items?.map(item => ({
       productId: item.product.id,
       productName: item.product.name,
       quantity: item.quantity,
@@ -313,7 +317,7 @@ function Sales() {
     }
     
     const saleData = {
-      items: saleItems.map(item => ({
+      items: saleItems?.map(item => ({
         productId: item.productId,
         quantity: item.quantity,
         price: item.price
@@ -390,6 +394,11 @@ function Sales() {
               Pending Payments
             </span>
           )}
+          {showCreditBalance && (
+            <span className="bg-gradient-to-r from-green-50 to-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 rounded-full border border-green-200 shadow-sm">
+              Credit Balance
+            </span>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
           <div className="relative">
@@ -428,21 +437,38 @@ function Sales() {
                 Clear
               </button>
             )}
-            {showPendingPayments && (
+            {(showPendingPayments || showCreditBalance) && (
               <button
-                onClick={() => setShowPendingPayments(false)}
+                onClick={() => {
+                  setShowPendingPayments(false);
+                  setShowCreditBalance(false);
+                }}
                 className="px-3 py-2 text-sm border border-primary-200 rounded-lg text-primary-700 hover:bg-primary-50 transition-colors"
               >
                 All Sales
               </button>
             )}
-            {!showPendingPayments && (
-              <button
-                onClick={() => setShowPendingPayments(true)}
-                className="px-3 py-2 text-sm border border-yellow-200 rounded-lg text-yellow-700 hover:bg-yellow-50 transition-colors"
-              >
-                Pending Payments
-              </button>
+            {!showPendingPayments && !showCreditBalance && (
+              <>
+                <button
+                  onClick={() => {
+                    setShowPendingPayments(true);
+                    setShowCreditBalance(false);
+                  }}
+                  className="px-3 py-2 text-sm border border-yellow-200 rounded-lg text-yellow-700 hover:bg-yellow-50 transition-colors"
+                >
+                  Pending Payments
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCreditBalance(true);
+                    setShowPendingPayments(false);
+                  }}
+                  className="px-3 py-2 text-sm border border-green-200 rounded-lg text-green-700 hover:bg-green-50 transition-colors"
+                >
+                  Credit Balance
+                </button>
+              </>
             )}
             <button
               onClick={() => setIsModalOpen(true)}
@@ -488,9 +514,9 @@ function Sales() {
                 </td>
                 <td className="px-6 py-4 text-gray-700" style={{minWidth: '300px'}}>
                   <div className="space-y-1">
-                    {sale.items.map((item, index) => (
+                    {Array.isArray(sale.items) && sale.items?.map((item, index) => (
                       <div key={index} className="text-sm flex items-center gap-2 flex-wrap">
-                        <span className="whitespace-nowrap">{item.product.name} x {item.quantity}</span>
+                        <span className="whitespace-nowrap">{item.product?.name || 'Unknown Product'} x {item.quantity}</span>
                         {item.returnedQuantity > 0 && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 whitespace-nowrap">
                             -{item.returnedQuantity} returned
@@ -504,16 +530,34 @@ function Sales() {
                   {formatPakistaniCurrency(sale.totalAmount)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {sale.totalAmount > sale.paidAmount ? (
-                    <div className="flex items-center">
-                      <span className="text-yellow-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>
-                      <span className="ml-2 px-2 py-1 text-xs bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 rounded-full border border-yellow-200 shadow-sm">
-                        Due: {formatPakistaniCurrency(sale.totalAmount - sale.paidAmount)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-green-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>
-                  )}
+                  {(() => {
+                    const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+                    const returnedAmount = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + Number(ret.totalAmount || 0), 0) : 0;
+                    const netAmount = originalAmount - returnedAmount;
+                    const balance = netAmount - Number(sale.paidAmount || 0);
+                    
+                    if (balance > 0) {
+                      return (
+                        <div className="flex items-center">
+                          <span className="text-yellow-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>
+                          <span className="ml-2 px-2 py-1 text-xs bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 rounded-full border border-yellow-200 shadow-sm">
+                            Due: {formatPakistaniCurrency(balance)}
+                          </span>
+                        </div>
+                      );
+                    } else if (balance < 0) {
+                      return (
+                        <div className="flex items-center">
+                          <span className="text-green-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>
+                          <span className="ml-2 px-2 py-1 text-xs bg-gradient-to-r from-red-50 to-red-100 text-red-800 rounded-full border border-red-200 shadow-sm">
+                            Credit: {formatPakistaniCurrency(Math.abs(balance))}
+                          </span>
+                        </div>
+                      );
+                    } else {
+                      return <span className="text-green-600 font-medium">{formatPakistaniCurrency(sale.paidAmount)}</span>;
+                    }
+                  })()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex space-x-2">
@@ -607,7 +651,7 @@ function Sales() {
                       />
                       {!productSelected && productSearchTerm && filteredProducts.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white border border-primary-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                          {filteredProducts.map((product) => (
+                          {filteredProducts?.map((product) => (
                             <div
                               key={product.id}
                               onClick={() => {
@@ -665,7 +709,7 @@ function Sales() {
                 {saleItems.length === 0 ? (
                   <p className="text-gray-500 text-sm italic">No items added yet</p>
                 ) : (
-                  saleItems.map((item, index) => (
+                  saleItems?.map((item, index) => (
                     <div key={index} className="flex justify-between items-center py-2 border-b border-primary-100 last:border-b-0">
                       <div>
                         <span className="font-medium text-primary-700">{item.productName}</span> 
