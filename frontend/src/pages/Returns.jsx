@@ -35,6 +35,13 @@ function Returns() {
     }
   );
 
+    // Maintain search input focus
+  useEffect(() => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [returns]);
+
   if (isLoading) return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-8">

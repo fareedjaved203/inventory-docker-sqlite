@@ -44,7 +44,9 @@ function BulkPurchasing() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [selectedContact, setSelectedContact] = useState(null);
   const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [debouncedContactSearchTerm, setDebouncedContactSearchTerm] = useState("");
   const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [debouncedProductSearchTerm, setDebouncedProductSearchTerm] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [showPendingPayments, setShowPendingPayments] = useState(location.state?.showPendingPayments || false);
@@ -61,6 +63,32 @@ function BulkPurchasing() {
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
     debouncedSearch(e.target.value);
+  };
+
+  // Debounced contact search
+  const debouncedContactSearch = useCallback(
+    debounce((term) => {
+      setDebouncedContactSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  const handleContactSearchChange = (value) => {
+    setContactSearchTerm(value);
+    debouncedContactSearch(value);
+  };
+
+  // Debounced product search
+  const debouncedProductSearch = useCallback(
+    debounce((term) => {
+      setDebouncedProductSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  const handleProductSearchChange = (value) => {
+    setProductSearchTerm(value);
+    debouncedProductSearch(value);
   };
 
   // Reset page when switching between all purchases and pending payments
@@ -80,41 +108,27 @@ function BulkPurchasing() {
     }
   );
 
-  // Fetch contacts for dropdown
-  const { data: contacts } = useQuery(['contacts'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`);
-    return response.data.items;
-  });
-
-  // Fetch products for dropdown
-  const { data: products } = useQuery(['products'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products`);
-    return response.data.items;
-  });
-
-  // Filter contacts based on search term
-  const [filteredContacts, setFilteredContacts] = useState([]);
-  useEffect(() => {
-    if (contacts) {
-      setFilteredContacts(
-        contacts.filter(contact =>
-          contact.name.toLowerCase().includes(contactSearchTerm.toLowerCase())
-        )
-      );
+  // Fetch contacts for dropdown with search
+  const { data: contacts } = useQuery(
+    ['contacts', debouncedContactSearchTerm],
+    async () => {
+      const searchParam = debouncedContactSearchTerm ? `&search=${debouncedContactSearchTerm}` : '';
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/contacts?limit=100${searchParam}`);
+      return response.data.items;
     }
-  }, [contacts, contactSearchTerm]);
+  );
 
-  // Filter products based on search term
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  useEffect(() => {
-    if (products) {
-      setFilteredProducts(
-        products.filter(product =>
-          product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
-        )
-      );
+  // Fetch products for dropdown with search
+  const { data: products } = useQuery(
+    ['products', debouncedProductSearchTerm],
+    async () => {
+      const searchParam = debouncedProductSearchTerm ? `&search=${debouncedProductSearchTerm}` : '';
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products?limit=100${searchParam}`);
+      return response.data.items;
     }
-  }, [products, productSearchTerm]);
+  );
+
+
 
   // Maintain search input focus
   useEffect(() => {
@@ -519,16 +533,16 @@ function BulkPurchasing() {
                     type="text"
                     value={contactSearchTerm}
                     onChange={(e) => {
-                      setContactSearchTerm(e.target.value);
+                      handleContactSearchChange(e.target.value);
                       isContactSelected(false);
                       setSelectedContact(null);
                     }}
                     placeholder="Search contacts..."
                     className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  {!contactSelected && contactSearchTerm && filteredContacts.length > 0 && (
+                  {!contactSelected && contactSearchTerm && contacts?.length > 0 && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                      {filteredContacts.map((contact) => (
+                      {contacts?.map((contact) => (
                         <div
                           key={contact.id}
                           onClick={() => {
@@ -564,16 +578,16 @@ function BulkPurchasing() {
                         type="text"
                         value={productSearchTerm}
                         onChange={(e) => {
-                          setProductSearchTerm(e.target.value);
+                          handleProductSearchChange(e.target.value);
                           isProductSelected(false);
                           setSelectedProduct(null);
                         }}
                         placeholder="Search products..."
                         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
-                      {!productSelected && productSearchTerm && filteredProducts.length > 0 && (
+                      {!productSelected && productSearchTerm && products?.length > 0 && (
                         <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto">
-                          {filteredProducts.map((product) => (
+                          {products?.map((product) => (
                             <div
                               key={product.id}
                               onClick={() => {

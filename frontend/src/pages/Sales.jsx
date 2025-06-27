@@ -55,6 +55,9 @@ function Sales() {
   const [saleDate, setSaleDate] = useState('');
   const [showPendingPayments, setShowPendingPayments] = useState(location?.state?.showPendingPayments || false);
   const [showCreditBalance, setShowCreditBalance] = useState(location?.state?.showCreditBalance || false);
+  const [debouncedProductSearchTerm, setDebouncedProductSearchTerm] = useState("");
+  const [contactSearchTerm, setContactSearchTerm] = useState("");
+  const [debouncedContactSearchTerm, setDebouncedContactSearchTerm] = useState("");
 
   const updateSale = useMutation(
     async (updatedSale) => {
@@ -93,17 +96,51 @@ function Sales() {
     }
   };
 
-  // Fetch products for dropdown
-  const { data: products } = useQuery(['products'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products`);
-    return response.data.items;
-  });
+  // Debounced product search
+  const debouncedProductSearch = useCallback(
+    debounce((term) => {
+      setDebouncedProductSearchTerm(term);
+    }, 300),
+    []
+  );
 
-  // Fetch contacts for dropdown
-  const { data: contacts } = useQuery(['contacts'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/contacts`);
-    return response.data.items;
-  });
+  const handleProductSearchChange = (value) => {
+    setProductSearchTerm(value);
+    debouncedProductSearch(value);
+  };
+
+  // Debounced contact search
+  const debouncedContactSearch = useCallback(
+    debounce((term) => {
+      setDebouncedContactSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  const handleContactSearchChange = (value) => {
+    setContactSearchTerm(value);
+    debouncedContactSearch(value);
+  };
+
+  // Fetch products for dropdown with search
+  const { data: products } = useQuery(
+    ['products', debouncedProductSearchTerm],
+    async () => {
+      const searchParam = debouncedProductSearchTerm ? `&search=${debouncedProductSearchTerm}` : '';
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/products?limit=100${searchParam}`);
+      return response.data.items;
+    }
+  );
+
+  // Fetch contacts for dropdown with search
+  const { data: contacts } = useQuery(
+    ['contacts', debouncedContactSearchTerm],
+    async () => {
+      const searchParam = debouncedContactSearchTerm ? `&search=${debouncedContactSearchTerm}` : '';
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/contacts?limit=100${searchParam}`);
+      return response.data.items;
+    }
+  );
 
   // Reset page when switching between views
   useEffect(() => {
@@ -184,15 +221,13 @@ function Sales() {
   useEffect(() => {
     if (products) {
       setFilteredProducts(
-        products.filter(product =>
-          product.name.toLowerCase().includes(productSearchTerm.toLowerCase())
-        )?.map(product => ({
+        products.map(product => ({
           ...product,
           quantity: product.quantity - (tempStockUpdates[product.id] || 0)
         }))
       );
     }
-  }, [products, productSearchTerm, tempStockUpdates]);
+  }, [products, tempStockUpdates]);
 
   const handleAddItem = () => {
     if (!selectedProduct || !quantity) {
@@ -661,7 +696,7 @@ function Sales() {
                         type="text"
                         value={productSearchTerm}
                         onChange={(e) => {
-                          setProductSearchTerm(e.target.value);
+                          handleProductSearchChange(e.target.value);
                           isProductSelected(false);
                           setSelectedProduct(null); // Reset selected product when search changes
                         }}
@@ -765,21 +800,35 @@ function Sales() {
               {/* Contact Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Contact (Optional)</label>
-                <select
-                  value={selectedContact?.id || ''}
-                  onChange={(e) => {
-                    const contactId = e.target.value;
-                    setSelectedContact(contactId ? contacts.find(c => c.id === contactId) : null);
-                  }}
-                  className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Select a contact (optional)</option>
-                  {contacts?.map((contact) => (
-                    <option key={contact.id} value={contact.id}>
-                      {contact.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={contactSearchTerm}
+                    onChange={(e) => {
+                      handleContactSearchChange(e.target.value);
+                      if (!e.target.value) setSelectedContact(null);
+                    }}
+                    placeholder="Search contacts..."
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {contactSearchTerm && contacts?.length > 0 && !selectedContact && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-primary-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {contacts?.map((contact) => (
+                        <div
+                          key={contact.id}
+                          onClick={() => {
+                            setSelectedContact(contact);
+                            setContactSearchTerm(contact.name);
+                          }}
+                          className="px-4 py-2 cursor-pointer hover:bg-primary-50"
+                        >
+                          <div className="font-medium">{contact.name}</div>
+                          {contact.phoneNumber && <div className="text-sm text-gray-600">{contact.phoneNumber}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               
               {/* Total and Paid Amount */}
@@ -891,7 +940,7 @@ function Sales() {
         isOpen={returnModalOpen}
         onClose={() => {
           setReturnModalOpen(false);
-          setSaleForReturn(null);
+          setSelectedSale(null);
           setReturnType('partial');
         }}
         sale={saleForReturn}

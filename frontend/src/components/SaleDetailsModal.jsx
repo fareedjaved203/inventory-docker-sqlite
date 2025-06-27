@@ -113,7 +113,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white p-6 rounded-lg w-full max-w-2xl h-[90vh] flex flex-col">
+      <div className="bg-white p-6 rounded-lg w-full max-w-4xl h-[90vh] flex flex-col">
         <div className="flex-shrink-0">
           <div className="flex justify-between items-start mb-6">
             <h2 className="text-2xl font-bold">Sale Details</h2>
