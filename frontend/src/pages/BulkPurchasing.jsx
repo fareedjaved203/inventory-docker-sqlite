@@ -519,7 +519,7 @@ function BulkPurchasing() {
       {/* New Purchase Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg h-[90vh] shadow-xl border border-gray-200 flex flex-col">
+          <div className="bg-white p-6 rounded-lg w-full max-w-xl h-[90vh] shadow-xl border border-gray-200 flex flex-col">
             <div className="flex-shrink-0">
               <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2">{isEditMode ? "Edit Purchase" : "New Purchase"}</h2>
             </div>
