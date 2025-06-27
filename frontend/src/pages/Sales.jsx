@@ -506,7 +506,10 @@ function Sales() {
               </>
             )}
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setPaidAmount('');
+                setIsModalOpen(true);
+              }}
               className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 text-sm rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm whitespace-nowrap"
             >
               New Sale
@@ -531,7 +534,7 @@ function Sales() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {sales?.items?.map((sale) => (
-              <tr key={sale.id} className={`hover:bg-primary-50 transition-colors ${sale.totalAmount > sale.paidAmount ? 'bg-yellow-50' : ''}`}>
+              <tr key={sale.id} className="hover:bg-primary-50 transition-colors">
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-700">
                   #{sale.billNumber}
                 </td>
@@ -885,7 +888,7 @@ function Sales() {
                   setSaleItems([]);
                   setSelectedProduct(null);
                   setQuantity("");
-                  setPaidAmount(0);
+                  setPaidAmount('');
                   setSelectedContact(null);
                   setSaleDate('');
                   setValidationErrors({});

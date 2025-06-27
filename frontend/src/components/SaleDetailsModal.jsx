@@ -362,6 +362,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                             </span>
                           </td>
                         </tr>
+                        {/* Commented out Refund Credit input field to prevent issues
                         {!allCreditRefunded && (
                           <tr>
                             <td colSpan="3" className="px-6 py-4 text-right font-medium">
@@ -426,6 +427,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                             </td>
                           </tr>
                         )}
+                        */}
                       </>
                     ) : (
                       <tr>
@@ -493,62 +495,74 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                             </div>
                           </div>
                           
-                          {!returnRecord.refundPaid && (
-                            <div className="mt-2 flex items-center gap-1">
-                              {creditPayment[returnRecord.id]?.completed ? (
-                                <div className="text-xs text-green-600 font-medium">
-                                  Refund of Rs.{creditPayment[returnRecord.id].amount} processed
-                                </div>
-                              ) : (
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={returnRecord.totalAmount}
-                                  step="0.01"
-                                  placeholder="Amount"
-                                  value={creditPayment[returnRecord.id]?.amount || ''}
-                                  onChange={(e) => {
-                                    const value = parseFloat(e.target.value) || 0;
-                                    if (value <= returnRecord.totalAmount) {
-                                      setCreditPayment(prev => ({
-                                        ...prev,
-                                        [returnRecord.id]: {
-                                          ...prev[returnRecord.id],
-                                          amount: e.target.value
-                                        }
-                                      }));
-                                    }
-                                  }}
-                                  disabled={creditPayment[returnRecord.id]?.processing || hasFullRefund}
-                                  className="w-20 text-xs py-1 px-2 border border-gray-300 rounded disabled:bg-gray-100"
-                                />
-                              )}
-                              {!creditPayment[returnRecord.id]?.completed && (
-                                <>
-                                {hasFullRefund && (
-                                  <div className="text-xs text-orange-600">
-                                    Full credit already refunded
+                          {(() => {
+                            const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+                            const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
+                            // Include local state refunds that haven't been persisted yet
+                            const localRefunds = Object.keys(creditPayment)
+                              .filter(key => key !== 'saleRefund' && creditPayment[key]?.completed)
+                              .reduce((sum, key) => sum + parseFloat(creditPayment[key]?.amount || 0), 0);
+                            const balance = netAmount - sale.paidAmount + totalRefunded + localRefunds;
+                            const hasOverpaid = balance < 0;
+                            const isSettled = balance === 0;
+                            
+                            return !returnRecord.refundPaid && hasOverpaid && !isSettled && (
+                              <div className="mt-2 flex items-center gap-1">
+                                {creditPayment[returnRecord.id]?.completed ? (
+                                  <div className="text-xs text-green-600 font-medium">
+                                    Refund of Rs.{creditPayment[returnRecord.id].amount} processed
                                   </div>
+                                ) : (
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={returnRecord.totalAmount}
+                                    step="0.01"
+                                    placeholder="Amount"
+                                    value={creditPayment[returnRecord.id]?.amount || ''}
+                                    onChange={(e) => {
+                                      const value = parseFloat(e.target.value) || 0;
+                                      if (value <= returnRecord.totalAmount) {
+                                        setCreditPayment(prev => ({
+                                          ...prev,
+                                          [returnRecord.id]: {
+                                            ...prev[returnRecord.id],
+                                            amount: e.target.value
+                                          }
+                                        }));
+                                      }
+                                    }}
+                                    disabled={creditPayment[returnRecord.id]?.processing || hasFullRefund}
+                                    className="w-20 text-xs py-1 px-2 border border-gray-300 rounded disabled:bg-gray-100"
+                                  />
                                 )}
-                                <button
-                                  onClick={() => {
-                                    const refundAmount = parseFloat(creditPayment[returnRecord.id]?.amount) || returnRecord.totalAmount;
-                                    if (refundAmount <= returnRecord.totalAmount) {
-                                      payCredit.mutate({
-                                        returnId: returnRecord.id,
-                                        amount: refundAmount
-                                      });
-                                    }
-                                  }}
-                                  disabled={creditPayment[returnRecord.id]?.processing || hasFullRefund}
-                                  className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-                                >
-                                  {creditPayment[returnRecord.id]?.processing ? 'Processing...' : 'Pay'}
-                                </button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                                {!creditPayment[returnRecord.id]?.completed && (
+                                  <>
+                                  {hasFullRefund && (
+                                    <div className="text-xs text-orange-600">
+                                      Full credit already refunded
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      const refundAmount = parseFloat(creditPayment[returnRecord.id]?.amount) || returnRecord.totalAmount;
+                                      if (refundAmount <= returnRecord.totalAmount) {
+                                        payCredit.mutate({
+                                          returnId: returnRecord.id,
+                                          amount: refundAmount
+                                        });
+                                      }
+                                    }}
+                                    disabled={creditPayment[returnRecord.id]?.processing || hasFullRefund}
+                                    className="text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+                                  >
+                                    {creditPayment[returnRecord.id]?.processing ? 'Processing...' : 'Pay'}
+                                  </button>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     ))}
