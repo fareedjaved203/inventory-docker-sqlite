@@ -398,7 +398,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
             )}
             <View style={styles.total}>
               <Text style={styles.totalLabel}>Net Total After Returns:</Text>
-              <Text>{formatPakistaniCurrencyPDF(netAmount)}</Text>
+              <Text>{formatPakistaniCurrencyPDF(netAmount > 0 ? netAmount : 0)}</Text>
             </View>
             {(() => {
               return balance > 0 ? (
@@ -409,7 +409,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
               ) : balance < 0 ? (
                 <View style={styles.total}>
                   <Text style={styles.totalLabel}>Credit Balance:</Text>
-                  <Text>{formatPakistaniCurrencyPDF(Math.abs(balance))}</Text>
+                  <Text>{formatPakistaniCurrencyPDF(Math.abs(balance) <= sale.paidAmount ? Math.abs(balance) : 0)}</Text>
                 </View>
               ) : (
                 <View style={styles.total}>

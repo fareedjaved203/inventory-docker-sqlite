@@ -339,11 +339,12 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                   )}
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-medium">
-                      Net Amount After Returns
+                      Net Total After Returns
                     </td>
                     <td className="px-6 py-4 text-right font-medium">
-                      Rs.{((sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0)).toFixed(2)}
+                      Rs.{Math.max(((sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0)), 0).toFixed(2)}
                     </td>
+
                   </tr>
                   {(() => {
                     const netAmount = (sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
@@ -369,7 +370,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                           </span>
                         </td>
                       </tr>
-                    ) : balance < 0 ? (
+                    ) : balance < 0 && Math.abs(balance) <= sale.paidAmount ? (
                       <>
                         <tr>
                           <td colSpan="3" className="px-6 py-4 text-right font-medium">
@@ -536,13 +537,14 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                                   <input
                                     type="number"
                                     min="0"
-                                    max={returnRecord.totalAmount}
+                                    max={Math.min(returnRecord.totalAmount, sale.paidAmount)}
                                     step="0.01"
                                     placeholder="Amount"
                                     value={creditPayment[returnRecord.id]?.amount || ''}
                                     onChange={(e) => {
                                       const value = parseFloat(e.target.value) || 0;
-                                      if (value <= returnRecord.totalAmount) {
+                                      const maxRefund = Math.min(returnRecord.totalAmount, sale.paidAmount);
+                                      if (value <= maxRefund) {
                                         setCreditPayment(prev => ({
                                           ...prev,
                                           [returnRecord.id]: {
@@ -565,8 +567,9 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                                   )}
                                   <button
                                     onClick={() => {
-                                      const refundAmount = parseFloat(creditPayment[returnRecord.id]?.amount) || returnRecord.totalAmount;
-                                      if (refundAmount <= returnRecord.totalAmount) {
+                                      const maxRefund = Math.min(returnRecord.totalAmount, sale.paidAmount);
+                                      const refundAmount = parseFloat(creditPayment[returnRecord.id]?.amount) || maxRefund;
+                                      if (refundAmount <= maxRefund) {
                                         payCredit.mutate({
                                           returnId: returnRecord.id,
                                           amount: refundAmount

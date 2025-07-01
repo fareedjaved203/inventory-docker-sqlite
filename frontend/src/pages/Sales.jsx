@@ -341,7 +341,7 @@ function Sales() {
     if (parsedPaidAmount > totalAmount) {
       setValidationErrors({
         ...validationErrors,
-        paidAmount: "Paid amount cannot be greater than total amount"
+        paidAmount: "Credit amount cannot exceed paid amount"
       });
       return;
     }
@@ -577,7 +577,7 @@ function Sales() {
                     const originalAmount = Number(sale.totalAmount);
                     const returnedAmount = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + Number(ret.totalAmount || 0), 0) : 0;
                     const totalRefunded = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0) : 0;
-                    const netAmount = originalAmount - returnedAmount;
+                    const netAmount = Math.max(originalAmount - returnedAmount, 0);
                     const balance = netAmount - Number(sale.paidAmount || 0) + totalRefunded;
                     
                     if (balance > 0) {

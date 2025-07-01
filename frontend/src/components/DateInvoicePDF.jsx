@@ -316,6 +316,54 @@ function DateInvoicePDF({ date, sales, shopSettings }) {
                   <Text>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
                 </View>
                 
+                <View style={styles.total}>
+                  <Text style={styles.totalLabel}>Paid Amount:</Text>
+                  <Text>{formatPakistaniCurrencyPDF(sale.paidAmount)}</Text>
+                </View>
+                
+                {sale.returns && sale.returns.length > 0 && (
+                  <>
+                    <View style={styles.total}>
+                      <Text style={styles.totalLabel}>Total Returned:</Text>
+                      <Text>{formatPakistaniCurrencyPDF(sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0))}</Text>
+                    </View>
+                    {totalRefunded > 0 && (
+                      <View style={styles.total}>
+                        <Text style={styles.totalLabel}>Total Refunded:</Text>
+                        <Text>{formatPakistaniCurrencyPDF(totalRefunded)}</Text>
+                      </View>
+                    )}
+                    <View style={styles.total}>
+                      <Text style={styles.totalLabel}>Net Total After Returns:</Text>
+                      <Text>{formatPakistaniCurrencyPDF(netAmount > 0 ? netAmount : 0)}</Text>
+                    </View>
+                  </>
+                )}
+                
+                {balance > 0 ? (
+                  <View style={styles.total}>
+                    <Text style={styles.totalLabel}>Balance Due:</Text>
+                    <Text>{formatPakistaniCurrencyPDF(balance)}</Text>
+                  </View>
+                ) : balance < 0 ? (
+                  <View style={styles.total}>
+                    <Text style={styles.totalLabel}>Credit Balance:</Text>
+                    <Text>{formatPakistaniCurrencyPDF(Math.abs(balance) <= sale.paidAmount ? Math.abs(balance) : 0)}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.total}>
+                    <Text style={styles.totalLabel}>Status:</Text>
+                    <Text>Fully Paid</Text>
+                  </View>
+                )}
+                
+                {/* {(!sale.returns || sale.returns.length === 0) && sale.totalAmount > sale.paidAmount && (
+                  <View style={styles.total}>
+                    <Text style={styles.totalLabel}>Balance Due:</Text>
+                    <Text>{formatPakistaniCurrencyPDF(sale.totalAmount - sale.paidAmount)}</Text>
+                  </View>
+                )} */}
+                
                 {/* Returns Section for this sale */}
                 {sale.returns && sale.returns.length > 0 && (
                   <View style={styles.table}>
