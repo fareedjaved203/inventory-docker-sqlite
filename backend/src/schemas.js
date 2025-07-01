@@ -23,6 +23,7 @@ export const saleSchema = z.object({
   contactId: z.string().optional(),
   billNumber: z.string().optional(), // Optional because it will be auto-generated
   saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
+  discount: z.number().min(0)
 });
 
 export const bulkPurchaseItemSchema = z.object({

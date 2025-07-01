@@ -29,6 +29,7 @@ COPY remove-sku-constraint.js ./
 COPY add-returns-migration.js ./
 COPY add-original-amount.js ./
 COPY add-refund-fields.js ./
+COPY add-discount-migration.js ./
 COPY ensure-data-dir.js ./
 
 # Copy built frontend
@@ -50,4 +51,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node ensure-data-dir.js && echo 'Initializing database...' && node init-db.js && echo 'Adding returns tables...' && node add-returns-migration.js && echo 'Adding original amount field...' && node add-original-amount.js && echo 'Adding refund tracking...' && node add-refund-fields.js && echo 'Starting application...' && node src/index.js"]
+CMD ["sh", "-c", "node ensure-data-dir.js && echo 'Initializing database...' && node init-db.js && echo 'Adding returns tables...' && node add-returns-migration.js && echo 'Adding original amount field...' && node add-original-amount.js && echo 'Adding refund tracking...' && node add-refund-fields.js && echo 'Adding discount field...' && node add-discount-migration.js && echo 'Handling migrations...' && (npx prisma migrate resolve --applied 20241201000000_add_discount_to_sales || echo 'Migration already handled') && echo 'Starting application...' && node src/index.js"]

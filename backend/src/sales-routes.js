@@ -79,12 +79,13 @@ export function setupSalesRoutes(app, prisma) {
           }
 
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : getCurrentPakistanTime();
-          
+          console.log("to create sale: ",req.body)
           const sale = await prisma.sale.create({
             data: {
               billNumber,
               totalAmount: req.body.totalAmount,
-              originalTotalAmount: req.body.totalAmount,
+              originalTotalAmount: req.body.totalAmount + (req.body.discount || 0),
+              discount: req.body.discount || 0,
               paidAmount: req.body.paidAmount || 0,
               saleDate,
               ...(req.body.contactId && { contact: { connect: { id: req.body.contactId } } }),
@@ -546,11 +547,14 @@ export function setupSalesRoutes(app, prisma) {
           });
 
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : undefined;
+          console.log("to update sale: ",req.body)
           
           const updatedSale = await prisma.sale.update({
             where: { id: req.params.id },
             data: {
               totalAmount: req.body.totalAmount,
+              originalTotalAmount: req.body.totalAmount + (req.body.discount || 0),
+              discount: req.body.discount || 0,
               paidAmount: req.body.paidAmount || 0,
               ...(saleDate && { saleDate }),
               ...(req.body.contactId ? { contact: { connect: { id: req.body.contactId } } } : { contact: { disconnect: true } }),

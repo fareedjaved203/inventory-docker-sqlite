@@ -243,7 +243,7 @@ function DateInvoicePDF({ date, sales, shopSettings }) {
 
         {sales.map((sale, saleIndex) => {
           // Calculate payment status for each sale
-          const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+          const netAmount = (sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
           const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
           const balance = netAmount - sale.paidAmount + totalRefunded;
           
@@ -298,6 +298,19 @@ function DateInvoicePDF({ date, sales, shopSettings }) {
                   </View>
                 ))}
 
+                {Number(sale.discount) > 0 && (
+                  <>
+                    <View style={styles.total}>
+                      <Text style={styles.totalLabel}>Subtotal:</Text>
+                      <Text>{formatPakistaniCurrencyPDF(sale.totalAmount + sale.discount)}</Text>
+                    </View>
+                    <View style={styles.total}>
+                      <Text style={styles.totalLabel}>Discount:</Text>
+                      <Text>-{formatPakistaniCurrencyPDF(sale.discount)}</Text>
+                    </View>
+                  </>
+                )}
+                
                 <View style={styles.total}>
                   <Text style={styles.totalLabel}>Sale Total:</Text>
                   <Text>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>

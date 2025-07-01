@@ -29,6 +29,7 @@ model Sale {
   billNumber  String     @unique
   totalAmount BigInt
   originalTotalAmount BigInt?
+  discount    BigInt     @default(0)
   paidAmount  BigInt     @default(0)
   saleDate    DateTime   @default(now())
   contact     Contact?   @relation(fields: [contactId], references: [id])

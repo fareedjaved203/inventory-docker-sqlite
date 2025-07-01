@@ -50,6 +50,7 @@ function Sales() {
   const [returnType, setReturnType] = useState('partial');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [totalAmount, setTotalAmount] = useState(0);
+  const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [selectedContact, setSelectedContact] = useState(null);
   const [saleDate, setSaleDate] = useState('');
@@ -296,11 +297,12 @@ function Sales() {
     return saleItems.reduce((sum, item) => sum + item.subtotal, 0);
   };
   
-  // Update total amount when sale items change
+  // Update total amount when sale items or discount change
   useEffect(() => {
-    const total = calculateTotal();
-    setTotalAmount(total);
-  }, [saleItems]);
+    const subtotal = calculateTotal();
+    const discountAmount = parseFloat(discount) || 0;
+    setTotalAmount(subtotal - discountAmount);
+  }, [saleItems, discount]);
 
   // Global function for opening return modal from SaleDetailsModal
   useEffect(() => {
@@ -324,6 +326,7 @@ function Sales() {
       subtotal: item.price * item.quantity
     })));
     setTotalAmount(sale.totalAmount);
+    setDiscount(sale.discount || 0);
     setPaidAmount(sale.paidAmount || 0);
     setSelectedContact(sale.contact || null);
     setSaleDate(new Date(sale.saleDate).toISOString().split('T')[0]);
@@ -358,6 +361,7 @@ function Sales() {
         price: item.price
       })),
       totalAmount: totalAmount,
+      discount: parseFloat(discount) || 0,
       paidAmount: parsedPaidAmount,
       ...(selectedContact && { contactId: selectedContact.id }),
       ...(saleDate && { saleDate })
@@ -507,6 +511,7 @@ function Sales() {
             )}
             <button
               onClick={() => {
+                setDiscount(0);
                 setPaidAmount('');
                 setIsModalOpen(true);
               }}
@@ -569,7 +574,7 @@ function Sales() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {(() => {
-                    const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+                    const originalAmount = Number(sale.totalAmount);
                     const returnedAmount = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + Number(ret.totalAmount || 0), 0) : 0;
                     const totalRefunded = Array.isArray(sale.returns) ? sale.returns.reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0) : 0;
                     const netAmount = originalAmount - returnedAmount;
@@ -834,6 +839,37 @@ function Sales() {
                 </div>
               </div>
               
+              {/* Subtotal and Discount */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Subtotal</label>
+                  <input
+                    type="text"
+                    value={`Rs.${calculateTotal().toFixed(2)}`}
+                    disabled
+                    className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-primary-800 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Discount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={calculateTotal()}
+                    value={discount}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value) || 0;
+                      if (value <= calculateTotal()) {
+                        setDiscount(e.target.value);
+                        setTotalAmount(calculateTotal() - value);
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+              
               {/* Total and Paid Amount */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -888,6 +924,7 @@ function Sales() {
                   setSaleItems([]);
                   setSelectedProduct(null);
                   setQuantity("");
+                  setDiscount(0);
                   setPaidAmount('');
                   setSelectedContact(null);
                   setSaleDate('');

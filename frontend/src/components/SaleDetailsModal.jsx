@@ -103,6 +103,10 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
 
   if (!isOpen || !sale) return null;
 
+  // Debug: Check sale object structure
+  console.log('Sale object:', sale);
+  console.log('Sale discount:', sale.discount);
+
   // Check if any individual return has been refunded
   const hasIndividualRefunds = Object.keys(creditPayment).some(key => 
     key !== 'saleRefund' && creditPayment[key]?.completed
@@ -281,10 +285,26 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                 <tfoot className="bg-gray-50">
                   <tr>
                     <td colSpan="3" className="px-6 py-4 text-right font-medium">
-                      Original Total
+                      Subtotal
                     </td>
                     <td className="px-6 py-4 text-right font-medium">
-                      Rs.{(sale.originalTotalAmount || sale.totalAmount).toFixed(2)}
+                      Rs.{sale.originalTotalAmount}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="3" className="px-6 py-4 text-right font-medium text-green-600">
+                      Discount
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-green-600">
+                      -Rs.{(sale.discount || 0).toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan="3" className="px-6 py-4 text-right font-medium">
+                      Total Amount
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium">
+                      Rs.{(sale.totalAmount).toFixed(2)}
                     </td>
                   </tr>
                   <tr>
@@ -322,11 +342,11 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                       Net Amount After Returns
                     </td>
                     <td className="px-6 py-4 text-right font-medium">
-                      Rs.{((sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0)).toFixed(2)}
+                      Rs.{((sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0)).toFixed(2)}
                     </td>
                   </tr>
                   {(() => {
-                    const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+                    const netAmount = (sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
                     const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
                     const balance = netAmount - sale.paidAmount + totalRefunded;
                     
@@ -496,7 +516,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                           </div>
                           
                           {(() => {
-                            const netAmount = (sale.originalTotalAmount || sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
+                            const netAmount = (sale.totalAmount) - (sale.returns?.reduce((sum, ret) => sum + ret.totalAmount, 0) || 0);
                             const totalRefunded = (sale.returns?.reduce((sum, ret) => sum + (ret.refundPaid ? (ret.refundAmount || 0) : 0), 0) || 0);
                             // Include local state refunds that haven't been persisted yet
                             const localRefunds = Object.keys(creditPayment)
