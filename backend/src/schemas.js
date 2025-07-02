@@ -18,7 +18,7 @@ export const saleItemSchema = z.object({
 
 export const saleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "At least one item is required"),
-  totalAmount: z.number().positive("Total amount must be positive").max(100000000, "Total amount cannot exceed Rs.10 Crores"),
+  totalAmount: z.number().min(0, "Total amount cannot be negative").max(100000000, "Total amount cannot exceed Rs.10 Crores"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative").max(100000000, "Paid amount cannot exceed Rs.10 Crores"),
   contactId: z.string().optional(),
   billNumber: z.string().optional(), // Optional because it will be auto-generated

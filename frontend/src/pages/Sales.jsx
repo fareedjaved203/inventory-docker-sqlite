@@ -20,7 +20,7 @@ const saleItemSchema = z.object({
 
 const saleSchema = z.object({
   items: z.array(saleItemSchema).min(1, "At least one item is required"),
-  totalAmount: z.number().positive("Total amount must be positive"),
+  totalAmount: z.number().min(0, "Total amount cannot be negative"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
   saleDate: z.string().optional(),
 });

@@ -235,7 +235,7 @@ export function setupSalesRoutes(app, prisma) {
       
       // Filter sales with pending payments based on net amounts after returns
       const pendingSales = allSales.filter(sale => {
-        const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+        const originalAmount = Number(sale.totalAmount);
         const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
         const netAmount = originalAmount - returnedAmount;
         const balance = netAmount - Number(sale.paidAmount);

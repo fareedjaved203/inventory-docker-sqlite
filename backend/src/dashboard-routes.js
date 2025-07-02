@@ -98,20 +98,21 @@ export function setupDashboardRoutes(app, prisma) {
           .reduce((sum, p) => sum + Number(p.totalAmount - p.paidAmount), 0),
         totalSalesDueAmount: totalSalesDueAmount
           .map(sale => {
-            const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+            const originalAmount = Number(sale.totalAmount);
             const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
-            const netAmount = originalAmount - returnedAmount;
-            const balance = netAmount - Number(sale.paidAmount);
+            const totalRefunded = (sale.returns || []).reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0);
+            const netAmount = Math.max(originalAmount - returnedAmount, 0);
+            const balance = netAmount - Number(sale.paidAmount || 0) + totalRefunded;
             return balance > 0 ? balance : 0;
           })
           .reduce((sum, due) => sum + due, 0),
         totalDueCredits: (totalDueCredits || [])
           .map(sale => {
-            const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+            const originalAmount = Number(sale.totalAmount);
             const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
             const totalRefunded = (sale.returns || []).reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0);
-            const netAmount = originalAmount - returnedAmount;
-            const balance = netAmount - Number(sale.paidAmount) + totalRefunded;
+            const netAmount = Math.max(originalAmount - returnedAmount, 0);
+            const balance = netAmount - Number(sale.paidAmount || 0) + totalRefunded;
             return balance < 0 ? Math.abs(balance) : 0;
           })
           .reduce((sum, credit) => sum + credit, 0)
