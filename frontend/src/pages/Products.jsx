@@ -284,11 +284,6 @@ function Products() {
               Damaged Items
             </span>
           )}
-          {showDamaged && (
-            <span className="bg-red-100 text-red-800 text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 rounded-full">
-              Damaged Items
-            </span>
-          )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
           {!showLowStock && (
