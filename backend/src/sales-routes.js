@@ -171,7 +171,7 @@ export function setupSalesRoutes(app, prisma) {
       
       // Filter sales with credit balance (overpaid)
       const creditSales = allSales.filter(sale => {
-        const originalAmount = Number(sale.originalTotalAmount || sale.totalAmount);
+        const originalAmount = Number(sale.totalAmount);
         const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
         const totalRefunded = (sale.returns || []).reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0);
         const netAmount = originalAmount - returnedAmount;
