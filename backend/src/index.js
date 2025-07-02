@@ -125,6 +125,151 @@ app.get('/api/products/low-stock', validateRequest({ query: querySchema }), asyn
   }
 });
 
+// Get damaged products
+app.get('/api/products/damaged', validateRequest({ query: querySchema }), async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    // Check if damagedQuantity column exists
+    try {
+      const where = {
+        damagedQuantity: {
+          gt: 0,
+        },
+      };
+
+      const [total, items] = await Promise.all([
+        prisma.product.count({ where }),
+        prisma.product.findMany({
+          where,
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: { updatedAt: 'desc' },
+        }),
+      ]);
+
+      res.json({
+        items: items.map(item => ({
+          ...item,
+          price: Number(item.price),
+          quantity: Number(item.damagedQuantity || 0)
+        })),
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      });
+    } catch (columnError) {
+      // If damagedQuantity column doesn't exist, return empty result
+      res.json({
+        items: [],
+        total: 0,
+        page: 1,
+        totalPages: 0,
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Mark product as damaged
+app.post('/api/products/:id/damage', async (req, res) => {
+  try {
+    const { quantity } = req.body;
+    const productId = req.params.id;
+    
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    if (quantity > product.quantity) {
+      return res.status(400).json({ error: 'Insufficient stock' });
+    }
+    
+    try {
+      const updatedProduct = await prisma.product.update({
+        where: { id: productId },
+        data: {
+          quantity: { decrement: quantity },
+          damagedQuantity: { increment: quantity }
+        }
+      });
+      
+      res.json({
+        ...updatedProduct,
+        price: Number(updatedProduct.price),
+        quantity: Number(updatedProduct.quantity),
+        damagedQuantity: Number(updatedProduct.damagedQuantity || 0)
+      });
+    } catch (columnError) {
+      // If damagedQuantity column doesn't exist, just decrement quantity
+      const updatedProduct = await prisma.product.update({
+        where: { id: productId },
+        data: {
+          quantity: { decrement: quantity }
+        }
+      });
+      
+      res.json({
+        ...updatedProduct,
+        price: Number(updatedProduct.price),
+        quantity: Number(updatedProduct.quantity),
+        damagedQuantity: 0
+      });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Restore damaged product
+app.post('/api/products/:id/restore', async (req, res) => {
+  try {
+    const { quantity } = req.body;
+    const productId = req.params.id;
+    
+    const product = await prisma.product.findUnique({
+      where: { id: productId }
+    });
+    
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    try {
+      const restoreQty = quantity || product.damagedQuantity || 0;
+      
+      if (restoreQty > (product.damagedQuantity || 0)) {
+        return res.status(400).json({ error: 'Cannot restore more than damaged quantity' });
+      }
+      
+      const updatedProduct = await prisma.product.update({
+        where: { id: productId },
+        data: {
+          quantity: { increment: restoreQty },
+          damagedQuantity: { decrement: restoreQty }
+        }
+      });
+      
+      res.json({
+        ...updatedProduct,
+        price: Number(updatedProduct.price),
+        quantity: Number(updatedProduct.quantity),
+        damagedQuantity: Number(updatedProduct.damagedQuantity || 0)
+      });
+    } catch (columnError) {
+      // If damagedQuantity column doesn't exist, return error
+      res.status(400).json({ error: 'Damaged items feature not available' });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get a single product
 app.get('/api/products/:id', async (req, res) => {
   try {

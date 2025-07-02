@@ -31,6 +31,10 @@ function Products() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [showLowStock, setShowLowStock] = useState(location.state?.showLowStock || false);
+  const [showDamaged, setShowDamaged] = useState(false);
+  const [damagedModalOpen, setDamagedModalOpen] = useState(false);
+  const [selectedProductForDamage, setSelectedProductForDamage] = useState(null);
+  const [damagedQuantity, setDamagedQuantity] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -39,10 +43,10 @@ function Products() {
     quantity: '',
   });
 
-  // Reset page when switching between all products and low stock
+  // Reset page when switching between filters
   useEffect(() => {
     setCurrentPage(1);
-  }, [showLowStock]);
+  }, [showLowStock, showDamaged]);
 
   const debouncedSearch = useCallback(
     debounce((term) => {
@@ -57,10 +61,13 @@ function Products() {
   };
 
   const { data: products, isLoading } = useQuery(
-    ['products', debouncedSearchTerm, currentPage, showLowStock],
+    ['products', debouncedSearchTerm, currentPage, showLowStock, showDamaged],
     async () => {
-      const endpoint = showLowStock ? '/api/products/low-stock' : '/api/products';
-      const searchParam = !showLowStock ? `&search=${debouncedSearchTerm}` : '';
+      let endpoint = '/api/products';
+      if (showLowStock) endpoint = '/api/products/low-stock';
+      if (showDamaged) endpoint = '/api/products/damaged';
+      
+      const searchParam = !showLowStock && !showDamaged ? `&search=${debouncedSearchTerm}` : '';
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}${endpoint}?page=${currentPage}&limit=${itemsPerPage}${searchParam}`
       );
@@ -140,6 +147,39 @@ function Products() {
         setValidationErrors({
           name: error.response?.data?.error || 'Failed to create product'
         });
+      }
+    }
+  );
+
+  const markAsDamaged = useMutation(
+    async ({ productId, quantity }) => {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/products/${productId}/damage`,
+        { quantity }
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['products']);
+        setDamagedModalOpen(false);
+        setSelectedProductForDamage(null);
+        setDamagedQuantity('');
+      }
+    }
+  );
+
+  const restoreDamaged = useMutation(
+    async ({ productId, quantity }) => {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/products/${productId}/restore`,
+        { quantity }
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['products']);
       }
     }
   );
@@ -234,6 +274,16 @@ function Products() {
               Low Stock Items
             </span>
           )}
+          {showDamaged && (
+            <span className="bg-red-100 text-red-800 text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 rounded-full">
+              Damaged Items
+            </span>
+          )}
+          {showDamaged && (
+            <span className="bg-red-100 text-red-800 text-xs sm:text-sm font-medium px-2 sm:px-3 py-1 rounded-full">
+              Damaged Items
+            </span>
+          )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
           {!showLowStock && (
@@ -252,13 +302,38 @@ function Products() {
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {showLowStock && (
+            {(showLowStock || showDamaged) && (
               <button
-                onClick={() => setShowLowStock(false)}
+                onClick={() => {
+                  setShowLowStock(false);
+                  setShowDamaged(false);
+                }}
                 className="px-3 py-2 text-sm border border-primary-200 rounded-lg text-primary-700 hover:bg-primary-50"
               >
                 Show All Products
               </button>
+            )}
+            {!showLowStock && !showDamaged && (
+              <>
+                <button
+                  onClick={() => {
+                    setShowLowStock(true);
+                    setShowDamaged(false);
+                  }}
+                  className="px-3 py-2 text-sm border border-orange-200 rounded-lg text-orange-700 hover:bg-orange-50"
+                >
+                  Low Stock
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDamaged(true);
+                    setShowLowStock(false);
+                  }}
+                  className="px-3 py-2 text-sm border border-red-200 rounded-lg text-red-700 hover:bg-red-50"
+                >
+                  Damaged Items
+                </button>
+              </>
             )}
             <button
               onClick={() => {
@@ -309,24 +384,50 @@ function Products() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleEdit(product)}
-                      className="text-primary-600 hover:text-primary-900 inline-flex items-center gap-1"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product)}
-                      className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m6.5 0a48.667 48.667 0 00-7.5 0" />
-                      </svg>
-                      Delete
-                    </button>
+                    {showDamaged ? (
+                      <button
+                        onClick={() => restoreDamaged.mutate({ productId: product.id, quantity: product.damagedQuantity || product.quantity })}
+                        className="text-green-600 hover:text-green-900 inline-flex items-center gap-1"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        Restore
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="text-primary-600 hover:text-primary-900 inline-flex items-center gap-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                          </svg>
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedProductForDamage(product);
+                            setDamagedModalOpen(true);
+                          }}
+                          className="text-orange-600 hover:text-orange-900 inline-flex items-center gap-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                          </svg>
+                          Damage
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product)}
+                          className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m6.5 0a48.667 48.667 0 00-7.5 0" />
+                          </svg>
+                          Delete
+                        </button>
+                      </>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -474,6 +575,79 @@ function Products() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Damaged Items Modal */}
+      {damagedModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl border border-gray-200">
+            <h2 className="text-2xl font-bold mb-6 text-red-800 border-b border-red-100 pb-2 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-red-600">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              Mark as Damaged
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                <input
+                  type="text"
+                  value={selectedProductForDamage?.name || ''}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Available Quantity</label>
+                <input
+                  type="text"
+                  value={selectedProductForDamage?.quantity || 0}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-700"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Damaged Quantity</label>
+                <input
+                  type="number"
+                  min="1"
+                  max={selectedProductForDamage?.quantity || 0}
+                  value={damagedQuantity}
+                  onChange={(e) => setDamagedQuantity(e.target.value)}
+                  className="w-full px-3 py-2 border border-red-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Enter quantity to mark as damaged"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDamagedModalOpen(false);
+                  setSelectedProductForDamage(null);
+                  setDamagedQuantity('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (damagedQuantity && selectedProductForDamage) {
+                    markAsDamaged.mutate({
+                      productId: selectedProductForDamage.id,
+                      quantity: parseInt(damagedQuantity)
+                    });
+                  }
+                }}
+                disabled={!damagedQuantity || parseInt(damagedQuantity) <= 0 || parseInt(damagedQuantity) > (selectedProductForDamage?.quantity || 0)}
+                className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded hover:from-red-700 hover:to-red-800 shadow-sm disabled:bg-gray-400"
+              >
+                Mark as Damaged
+              </button>
+            </div>
           </div>
         </div>
       )}
