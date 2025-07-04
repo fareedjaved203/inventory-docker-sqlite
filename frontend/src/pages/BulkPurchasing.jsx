@@ -224,9 +224,18 @@ function BulkPurchasing() {
     if (!selectedProduct || !quantity || !purchasePrice) {
       setValidationErrors({
         ...validationErrors,
-        product: !selectedProduct ? "Please select a product" : undefined,
+        product: !selectedProduct ? "Please select a product from the dropdown" : undefined,
         quantity: !quantity ? "Please enter a quantity" : undefined,
         purchasePrice: !purchasePrice ? "Please enter a purchase price" : undefined
+      });
+      return;
+    }
+    
+    // Check if user typed something but didn't select from dropdown
+    if (productSearchTerm && !selectedProduct) {
+      setValidationErrors({
+        ...validationErrors,
+        product: "Please select a valid product from the dropdown"
       });
       return;
     }
@@ -261,7 +270,16 @@ function BulkPurchasing() {
     if (!selectedContact) {
       setValidationErrors({
         ...validationErrors,
-        contact: "Please select a contact"
+        contact: "Please select a contact from the dropdown"
+      });
+      return;
+    }
+    
+    // Validate contact if something is typed but not selected
+    if (contactSearchTerm && !selectedContact) {
+      setValidationErrors({
+        ...validationErrors,
+        contact: "Please select a valid contact from the dropdown"
       });
       return;
     }

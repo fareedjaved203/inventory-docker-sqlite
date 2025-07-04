@@ -183,14 +183,15 @@ export function setupBulkPurchaseRoutes(app, prisma) {
             }
           });
 
-          // Update product quantities
+          // Update product quantities and purchase prices
           for (const item of req.body.items) {
             await prisma.product.update({
               where: { id: item.productId },
               data: {
                 quantity: {
                   increment: item.quantity
-                }
+                },
+                purchasePrice: item.purchasePrice
               }
             });
           }
@@ -272,14 +273,15 @@ export function setupBulkPurchaseRoutes(app, prisma) {
             }
           });
 
-          // Update product quantities for new items
+          // Update product quantities and purchase prices for new items
           for (const item of req.body.items) {
             await prisma.product.update({
               where: { id: item.productId },
               data: {
                 quantity: {
                   increment: item.quantity
-                }
+                },
+                purchasePrice: item.purchasePrice
               }
             });
           }

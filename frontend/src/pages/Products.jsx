@@ -373,7 +373,8 @@ function Products() {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider hidden md:table-cell">SKU</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Sell Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider hidden lg:table-cell">Purchase Price</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider hidden sm:table-cell">Quantity</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-primary-700 uppercase tracking-wider">Actions</th>
             </tr>
@@ -384,6 +385,9 @@ function Products() {
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-700">{product.name}</td>
                 <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell text-gray-600">{product.sku}</td>
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-800">{formatPakistaniCurrency(product.price)}</td>
+                <td className="px-6 py-4 whitespace-nowrap hidden lg:table-cell font-medium text-blue-800">
+                  {product.purchasePrice ? formatPakistaniCurrency(product.purchasePrice) : '-'}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
                   <span className={`${
                     product.quantity <= (product.lowStockThreshold || 10)

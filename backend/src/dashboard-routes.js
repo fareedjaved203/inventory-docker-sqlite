@@ -23,7 +23,11 @@ export function setupDashboardRoutes(app, prisma) {
         salesLast365Days,
         totalPurchaseDueAmount,
         totalSalesDueAmount,
-        totalDueCredits
+        totalDueCredits,
+        profitToday,
+        profitLast7Days,
+        profitLast30Days,
+        profitLast365Days
       ] = await Promise.all([
         // Sales Today
         prisma.sale.aggregate({
@@ -85,8 +89,90 @@ export function setupDashboardRoutes(app, prisma) {
           include: {
             returns: true
           }
-        }).catch(() => [])
+        }).catch(() => []),
+        
+        // Profit Today
+        prisma.sale.findMany({
+          where: {
+            saleDate: {
+              gte: today
+            }
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }),
+        
+        // Profit Last 7 Days
+        prisma.sale.findMany({
+          where: {
+            saleDate: {
+              gte: sevenDaysAgo
+            }
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }),
+        
+        // Profit Last 30 Days
+        prisma.sale.findMany({
+          where: {
+            saleDate: {
+              gte: thirtyDaysAgo
+            }
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        }),
+        
+        // Profit Last 365 Days
+        prisma.sale.findMany({
+          where: {
+            saleDate: {
+              gte: yearAgo
+            }
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            }
+          }
+        })
       ]);
+
+      // Calculate profit for each period
+      const calculateProfit = (sales) => {
+        return sales.reduce((totalProfit, sale) => {
+          const saleProfit = sale.items.reduce((itemProfit, item) => {
+            const sellPrice = Number(item.price);
+            const purchasePrice = Number(item.product.purchasePrice || 0);
+            const quantity = Number(item.quantity);
+            
+            // Only calculate profit if purchase price is set (> 0)
+            if (purchasePrice > 0) {
+              return itemProfit + ((sellPrice - purchasePrice) * quantity);
+            }
+            return itemProfit;
+          }, 0);
+          return totalProfit + saleProfit;
+        }, 0);
+      };
 
       res.json({
         salesToday: Number(salesToday._sum.totalAmount || 0),
@@ -115,7 +201,11 @@ export function setupDashboardRoutes(app, prisma) {
             const balance = netAmount - Number(sale.paidAmount || 0) + totalRefunded;
             return balance < 0 ? Math.abs(balance) : 0;
           })
-          .reduce((sum, credit) => sum + credit, 0)
+          .reduce((sum, credit) => sum + credit, 0),
+        profitToday: calculateProfit(profitToday),
+        profitLast7Days: calculateProfit(profitLast7Days),
+        profitLast30Days: calculateProfit(profitLast30Days),
+        profitLast365Days: calculateProfit(profitLast365Days)
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);

@@ -132,6 +132,55 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Profit Overview */}
+      <h2 className="text-xl font-semibold mb-4 text-primary-700">Profit Overview</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border border-purple-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-purple-600 text-sm font-medium">Profit Today</h2>
+            <div className="p-2 bg-purple-500 text-white rounded-full">
+              <FaCalendarDay className="text-xl" />
+            </div>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold mt-2 text-purple-700 truncate" title={formatPakistaniCurrency(salesStats?.profitToday || 0)}>
+            {formatPakistaniCurrency(salesStats?.profitToday || 0)}
+          </p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border border-purple-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-purple-600 text-sm font-medium">Last 7 Days</h2>
+            <div className="p-2 bg-purple-500 text-white rounded-full">
+              <FaCalendarWeek className="text-xl" />
+            </div>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold mt-2 text-purple-700 truncate" title={formatPakistaniCurrency(salesStats?.profitLast7Days || 0)}>
+            {formatPakistaniCurrency(salesStats?.profitLast7Days || 0)}
+          </p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border border-purple-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-purple-600 text-sm font-medium">Last 30 Days</h2>
+            <div className="p-2 bg-purple-500 text-white rounded-full">
+              <FaCalendarAlt className="text-xl" />
+            </div>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold mt-2 text-purple-700 truncate" title={formatPakistaniCurrency(salesStats?.profitLast30Days || 0)}>
+            {formatPakistaniCurrency(salesStats?.profitLast30Days || 0)}
+          </p>
+        </div>
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg shadow-md border border-purple-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-purple-600 text-sm font-medium">Last 365 Days</h2>
+            <div className="p-2 bg-purple-500 text-white rounded-full">
+              <FaCalendar className="text-xl" />
+            </div>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold mt-2 text-purple-700 truncate" title={formatPakistaniCurrency(salesStats?.profitLast365Days || 0)}>
+            {formatPakistaniCurrency(salesStats?.profitLast365Days || 0)}
+          </p>
+        </div>
+      </div>
+
       {/* Financial Overview */}
       <h2 className="text-xl font-semibold mb-4 text-primary-700">Financial Overview</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

@@ -15,6 +15,7 @@ model Product {
   name        String     @unique
   description String
   price       BigInt
+  purchasePrice BigInt?  @default(0)
   sku         String?
   quantity    BigInt
   damagedQuantity BigInt @default(0)

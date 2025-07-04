@@ -234,8 +234,17 @@ function Sales() {
     if (!selectedProduct || !quantity) {
       setValidationErrors({
         ...validationErrors,
-        product: !selectedProduct ? "Please select a product" : undefined,
+        product: !selectedProduct ? "Please select a product from the dropdown" : undefined,
         quantity: !quantity ? "Please enter a quantity" : undefined
+      });
+      return;
+    }
+    
+    // Check if user typed something but didn't select from dropdown
+    if (productSearchTerm && !selectedProduct) {
+      setValidationErrors({
+        ...validationErrors,
+        product: "Please select a valid product from the dropdown"
       });
       return;
     }
@@ -336,6 +345,15 @@ function Sales() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    // Validate contact if something is typed but not selected
+    if (contactSearchTerm && !selectedContact) {
+      setValidationErrors({
+        ...validationErrors,
+        contact: "Please select a valid contact from the dropdown or clear the field"
+      });
+      return;
+    }
     
     const parsedPaidAmount = parseFloat(paidAmount) || 0;
     if (parsedPaidAmount > totalAmount) {
@@ -814,7 +832,13 @@ function Sales() {
                     value={contactSearchTerm}
                     onChange={(e) => {
                       handleContactSearchChange(e.target.value);
-                      if (!e.target.value) setSelectedContact(null);
+                      if (!e.target.value) {
+                        setSelectedContact(null);
+                        setValidationErrors({
+                          ...validationErrors,
+                          contact: undefined
+                        });
+                      }
                     }}
                     placeholder="Search contacts..."
                     className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -837,6 +861,9 @@ function Sales() {
                     </div>
                   )}
                 </div>
+                {validationErrors.contact && (
+                  <p className="text-red-500 text-sm mt-1">{validationErrors.contact}</p>
+                )}
               </div>
               
               {/* Subtotal and Discount */}
