@@ -10,21 +10,40 @@ function ReturnModal({ sale, isOpen, onClose, returnType = 'partial' }) {
   const [removeFromStock, setRemoveFromStock] = useState(false);
   const [refundAmount, setRefundAmount] = useState(0);
 
+  // Consolidate items by product ID
+  const getConsolidatedItems = (items) => {
+    const consolidated = {};
+    items.forEach(item => {
+      const availableQty = item.remainingQuantity !== undefined ? item.remainingQuantity : item.quantity;
+      if (availableQty > 0) {
+        if (consolidated[item.product.id]) {
+          consolidated[item.product.id].quantity += availableQty;
+          consolidated[item.product.id].returnedQuantity += item.returnedQuantity || 0;
+        } else {
+          consolidated[item.product.id] = {
+            product: item.product,
+            quantity: availableQty,
+            price: item.price,
+            returnedQuantity: item.returnedQuantity || 0,
+            remainingQuantity: availableQty
+          };
+        }
+      }
+    });
+    return Object.values(consolidated);
+  };
+
   // Auto-select all items for full return
   useEffect(() => {
     if (returnType === 'full' && sale && isOpen) {
-      const allItems = sale.items
-        .filter(item => (item.remainingQuantity || item.quantity) > 0)
-        .map(item => {
-          const availableQty = item.remainingQuantity !== undefined ? item.remainingQuantity : item.quantity;
-          return {
-            productId: item.product.id,
-            productName: item.product.name,
-            quantity: availableQty,
-            price: item.price,
-            maxQuantity: availableQty
-          };
-        });
+      const consolidatedItems = getConsolidatedItems(sale.items);
+      const allItems = consolidatedItems.map(item => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+        maxQuantity: item.quantity
+      }));
       setReturnItems(allItems);
       setReason('Full sale return');
     } else if (returnType === 'partial') {
@@ -148,47 +167,49 @@ function ReturnModal({ sale, isOpen, onClose, returnType = 'partial' }) {
                 
                 <h3 className="text-lg font-medium mb-4">Select Items to Return</h3>
               <div className="space-y-3">
-                {sale.items.filter(item => (item.remainingQuantity || item.quantity) > 0).length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>All items from this sale have already been returned.</p>
-                  </div>
-                ) : (
-                  sale.items.filter(item => (item.remainingQuantity || item.quantity) > 0).map((item, index) => {
-                    const availableQty = item.remainingQuantity !== undefined ? item.remainingQuantity : item.quantity;
-                  const returnItem = returnItems.find(r => r.productId === item.product.id);
-                  const returnQuantity = returnItem ? returnItem.quantity : 0;
-                  
-                  return (
-                    <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                      <div className="flex-1">
-                        <div className="font-medium">{item.product.name}</div>
-                        <div className="text-sm text-gray-600">
-                          Available to return: {availableQty} × {formatPakistaniCurrency(item.price)}
-                        </div>
-                        {item.returnedQuantity > 0 && (
-                          <div className="text-xs text-red-600">
-                            Already returned: {item.returnedQuantity}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm">Return Qty:</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max={availableQty}
-                          value={returnQuantity}
-                          onChange={(e) => {
-                            const value = e.target.value === '' ? 0 : parseInt(e.target.value);
-                            handleItemToggle(item, value);
-                          }}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
-                        />
-                      </div>
+                {(() => {
+                  const consolidatedItems = getConsolidatedItems(sale.items);
+                  return consolidatedItems.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>All items from this sale have already been returned.</p>
                     </div>
-                    );
-                  })
-                )}
+                  ) : (
+                    consolidatedItems.map((item, index) => {
+                      const returnItem = returnItems.find(r => r.productId === item.product.id);
+                      const returnQuantity = returnItem ? returnItem.quantity : 0;
+                      
+                      return (
+                        <div key={item.product.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                          <div className="flex-1">
+                            <div className="font-medium">{item.product.name}</div>
+                            <div className="text-sm text-gray-600">
+                              Available to return: {item.quantity} × {formatPakistaniCurrency(item.price)}
+                            </div>
+                            {item.returnedQuantity > 0 && (
+                              <div className="text-xs text-red-600">
+                                Already returned: {item.returnedQuantity}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-sm">Return Qty:</label>
+                            <input
+                              type="number"
+                              min="0"
+                              max={item.quantity}
+                              value={returnQuantity}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                                handleItemToggle(item, value);
+                              }}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  );
+                })()}
               </div>
               </div>
             )}
@@ -270,9 +291,9 @@ function ReturnModal({ sale, isOpen, onClose, returnType = 'partial' }) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={returnItems.length === 0 || (returnType === 'partial' && sale.items.filter(item => (item.remainingQuantity || item.quantity) > 0).length === 0)}
+            disabled={returnItems.length === 0 || (returnType === 'partial' && getConsolidatedItems(sale.items).length === 0)}
             className={`px-4 py-2 text-white rounded shadow-sm ${
-              returnItems.length === 0 || (returnType === 'partial' && sale.items.filter(item => (item.remainingQuantity || item.quantity) > 0).length === 0)
+              returnItems.length === 0 || (returnType === 'partial' && getConsolidatedItems(sale.items).length === 0)
                 ? 'bg-gray-400 cursor-not-allowed'
                 : 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800'
             }`}

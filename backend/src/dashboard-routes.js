@@ -99,11 +99,7 @@ export function setupDashboardRoutes(app, prisma) {
             }
           },
           include: {
-            items: {
-              include: {
-                product: true
-              }
-            }
+            items: true
           }
         }),
         
@@ -115,11 +111,7 @@ export function setupDashboardRoutes(app, prisma) {
             }
           },
           include: {
-            items: {
-              include: {
-                product: true
-              }
-            }
+            items: true
           }
         }),
         
@@ -131,11 +123,7 @@ export function setupDashboardRoutes(app, prisma) {
             }
           },
           include: {
-            items: {
-              include: {
-                product: true
-              }
-            }
+            items: true
           }
         }),
         
@@ -147,21 +135,17 @@ export function setupDashboardRoutes(app, prisma) {
             }
           },
           include: {
-            items: {
-              include: {
-                product: true
-              }
-            }
+            items: true
           }
         })
       ]);
 
-      // Calculate profit for each period
+      // Calculate profit for each period using stored purchase prices
       const calculateProfit = (sales) => {
         return sales.reduce((totalProfit, sale) => {
           const saleProfit = sale.items.reduce((itemProfit, item) => {
             const sellPrice = Number(item.price);
-            const purchasePrice = Number(item.product.purchasePrice || 0);
+            const purchasePrice = Number(item.purchasePrice || 0);
             const quantity = Number(item.quantity);
             
             // Only calculate profit if purchase price is set (> 0)

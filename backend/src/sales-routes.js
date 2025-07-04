@@ -80,6 +80,16 @@ export function setupSalesRoutes(app, prisma) {
 
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : getCurrentPakistanTime();
           console.log("to create sale: ",req.body)
+          // Get product details including purchase prices
+          const productDetails = await Promise.all(
+            req.body.items.map(item => 
+              prisma.product.findUnique({
+                where: { id: item.productId },
+                select: { id: true, purchasePrice: true, name: true, quantity: true }
+              })
+            )
+          );
+
           const sale = await prisma.sale.create({
             data: {
               billNumber,
@@ -90,9 +100,10 @@ export function setupSalesRoutes(app, prisma) {
               saleDate,
               ...(req.body.contactId && { contact: { connect: { id: req.body.contactId } } }),
               items: {
-                create: req.body.items.map(item => ({
+                create: req.body.items.map((item, index) => ({
                   quantity: item.quantity,
                   price: item.price,
+                  purchasePrice: productDetails[index]?.purchasePrice || 0,
                   product: {
                     connect: { id: item.productId }
                   }
@@ -549,6 +560,16 @@ export function setupSalesRoutes(app, prisma) {
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : undefined;
           console.log("to update sale: ",req.body)
           
+          // Get product details including purchase prices for update
+          const productDetails = await Promise.all(
+            req.body.items.map(item => 
+              prisma.product.findUnique({
+                where: { id: item.productId },
+                select: { id: true, purchasePrice: true, name: true, quantity: true }
+              })
+            )
+          );
+
           const updatedSale = await prisma.sale.update({
             where: { id: req.params.id },
             data: {
@@ -559,9 +580,10 @@ export function setupSalesRoutes(app, prisma) {
               ...(saleDate && { saleDate }),
               ...(req.body.contactId ? { contact: { connect: { id: req.body.contactId } } } : { contact: { disconnect: true } }),
               items: {
-                create: req.body.items.map(item => ({
+                create: req.body.items.map((item, index) => ({
                   quantity: item.quantity,
                   price: item.price,
+                  purchasePrice: productDetails[index]?.purchasePrice || 0,
                   product: {
                     connect: { id: item.productId }
                   }

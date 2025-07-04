@@ -13,6 +13,7 @@ const productSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string(),
   price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
+  purchasePrice: z.number().min(0, "Purchase price must be non-negative").max(100000000, "Purchase price cannot exceed Rs.10 Crores").optional(),
   sku: z.string().optional(),
   quantity: z.number().int().min(0, "Quantity must be non-negative"),
   lowStockThreshold: z.number().int().min(0, "Low stock threshold must be non-negative"),
@@ -41,6 +42,7 @@ function Products() {
     name: '',
     description: '',
     price: '',
+    purchasePrice: '',
     sku: '',
     quantity: '',
     lowStockThreshold: '10',
@@ -87,6 +89,7 @@ function Products() {
 
   const updateProduct = useMutation(
     async (updatedProduct) => {
+      console.log("payload of product:", updatedProduct)
       const response = await axios.put(
         `${import.meta.env.VITE_API_URL}/api/products/${updatedProduct.id.toString()}`,
         updatedProduct
@@ -97,11 +100,12 @@ function Products() {
       onSuccess: () => {
         queryClient.invalidateQueries(['products']);
         setIsModalOpen(false);
-        setFormData({ name: '', description: '', price: '', sku: '', quantity: '', lowStockThreshold: '10' });
+        setFormData({ name: '', description: '', price: '', purchasePrice: '', sku: '', quantity: '', lowStockThreshold: '10' });
         setIsEditMode(false);
         setValidationErrors({});
       },
       onError: (error) => {
+        console.error('Update product error:', error);
         setValidationErrors({
           name: error.response?.data?.error || 'Failed to update product'
         });
@@ -143,7 +147,7 @@ function Products() {
       onSuccess: () => {
         queryClient.invalidateQueries(['products']);
         setIsModalOpen(false);
-        setFormData({ name: '', description: '', price: '', sku: '', quantity: '', lowStockThreshold: '10' });
+        setFormData({ name: '', description: '', price: '', purchasePrice: '', sku: '', quantity: '', lowStockThreshold: '10' });
         setValidationErrors({});
       },
       onError: (error) => {
@@ -211,26 +215,35 @@ function Products() {
     const productData = {
       ...formData,
       price: parseFloat(formData.price),
+      purchasePrice: formData.purchasePrice && formData.purchasePrice.trim() ? parseFloat(formData.purchasePrice) : null,
       quantity: parseInt(formData.quantity),
       lowStockThreshold: parseInt(formData.lowStockThreshold),
     };
+    
+    console.log('Form data:', formData);
+    console.log('Product data being sent:', productData);
 
     try {
-      productSchema.parse(productData);
+      const validatedData = productSchema.parse(productData);
+      console.log('After Zod validation:', validatedData);
       setValidationErrors({});
 
       if (isEditMode) {
-        updateProduct.mutate(productData);
+        // Ensure id is included for updates
+        updateProduct.mutate({ ...validatedData, id: formData.id });
       } else {
-        createProduct.mutate(productData);
+        createProduct.mutate(validatedData);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Zod validation error:', error.errors);
         const errors = {};
         error.errors.forEach((err) => {
           errors[err.path[0]] = err.message;
         });
         setValidationErrors(errors);
+      } else {
+        console.error('Unexpected error:', error);
       }
     }
   };
@@ -241,6 +254,7 @@ function Products() {
       name: product.name,
       description: product.description,
       price: product.price.toString(),
+      purchasePrice: product.purchasePrice ? product.purchasePrice.toString() : '',
       sku: product.sku,
       quantity: product.quantity.toString(),
       lowStockThreshold: (product.lowStockThreshold || 10).toString(),
@@ -352,6 +366,7 @@ function Products() {
                   name: '',
                   description: '',
                   price: '',
+                  purchasePrice: '',
                   sku: '',
                   quantity: '',
                   lowStockThreshold: '10'
@@ -551,7 +566,7 @@ function Products() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
-                    <FaDollarSign className="text-primary-500" /> Price
+                    <FaDollarSign className="text-primary-500" /> Sell Price
                   </label>
                   <input
                     type="number"
@@ -571,6 +586,30 @@ function Products() {
                   />
                   {validationErrors.price && (
                     <p className="text-red-500 text-sm mt-1">{validationErrors.price}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <FaDollarSign className="text-blue-500" /> Purchase Price (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    max="100000000"
+                    value={formData.purchasePrice}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value);
+                      if (value > 100000000) {
+                        setValidationErrors({...validationErrors, purchasePrice: "Purchase price cannot exceed Rs.10 Crores"});
+                      } else {
+                        setValidationErrors({...validationErrors, purchasePrice: undefined});
+                      }
+                      setFormData({ ...formData, purchasePrice: e.target.value });
+                    }}
+                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {validationErrors.purchasePrice && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.purchasePrice}</p>
                   )}
                 </div>
                 <div>

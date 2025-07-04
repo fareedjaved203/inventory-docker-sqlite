@@ -240,47 +240,80 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sale.items?.map((item, index) => (
-                    <tr key={index} className={item.returnedQuantity > 0 ? 'bg-red-50' : ''}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center gap-2">
-                          {item.product?.name}
+                  {(() => {
+                    // Calculate returned quantities from returns data
+                    const returnedQuantities = {};
+                    if (Array.isArray(sale.returns)) {
+                      sale.returns.forEach(returnRecord => {
+                        if (returnRecord.items && Array.isArray(returnRecord.items)) {
+                          returnRecord.items.forEach(returnItem => {
+                            if (returnItem.productId) {
+                              returnedQuantities[returnItem.productId] = (returnedQuantities[returnItem.productId] || 0) + returnItem.quantity;
+                            }
+                          });
+                        }
+                      });
+                    }
+                    
+                    // Consolidate items by product ID
+                    const consolidatedItems = {};
+                    if (Array.isArray(sale.items)) {
+                      sale.items.forEach(item => {
+                        if (consolidatedItems[item.product?.id]) {
+                          consolidatedItems[item.product.id].quantity += item.quantity;
+                        } else {
+                          consolidatedItems[item.product?.id] = {
+                            product: item.product,
+                            quantity: item.quantity,
+                            price: item.price,
+                            returnedQuantity: returnedQuantities[item.product?.id] || 0
+                          };
+                        }
+                      });
+                    }
+                    
+                    return Object.values(consolidatedItems).map((item, index) => (
+                      <tr key={item.product?.id || index} className={item.returnedQuantity > 0 ? 'bg-red-50' : ''}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-2">
+                            {item.product?.name}
+                            {item.returnedQuantity > 0 && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                                </svg>
+                                {item.returnedQuantity} Returned
+                              </span>
+                            )}
+                            {item.returnedQuantity === item.quantity && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                Fully Returned
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          <div>{item.quantity}</div>
                           {item.returnedQuantity > 0 && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 mr-1">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                              </svg>
-                              {item.returnedQuantity} Returned
-                            </span>
+                            <div className="text-xs text-red-600">
+                              -{item.returnedQuantity}
+                            </div>
                           )}
-                          {item.returnedQuantity === item.quantity && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                              Fully Returned
-                            </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          Rs.{item.price.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          <div>Rs.{(item.price * item.quantity).toFixed(2)}</div>
+                          {item.returnedQuantity > 0 && (
+                            <div className="text-xs text-red-600">
+                              -Rs.{(item.price * item.returnedQuantity).toFixed(2)}
+                            </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <div>{item.quantity}</div>
-                        {item.returnedQuantity > 0 && (
-                          <div className="text-xs text-red-600">
-                            -{item.returnedQuantity}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        Rs.{item.price.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <div>Rs.{(item.price * item.quantity).toFixed(2)}</div>
-                        {item.returnedQuantity > 0 && (
-                          <div className="text-xs text-red-600">
-                            -Rs.{(item.price * item.returnedQuantity).toFixed(2)}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
                 <tfoot className="bg-gray-50">
                   <tr>

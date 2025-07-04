@@ -259,15 +259,40 @@ function Sales() {
       return;
     }
 
-    const newItem = {
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      quantity: quantityNum,
-      price: selectedProduct.price,
-      subtotal: selectedProduct.price * quantityNum
-    };
-
-    setSaleItems([...saleItems, newItem]);
+    // Check if product already exists in sale items
+    const existingItemIndex = saleItems.findIndex(item => item.productId === selectedProduct.id);
+    
+    if (existingItemIndex >= 0) {
+      // Update existing item quantity
+      const updatedItems = [...saleItems];
+      const existingItem = updatedItems[existingItemIndex];
+      const newQuantity = existingItem.quantity + quantityNum;
+      
+      // Check if total quantity exceeds available stock
+      if (newQuantity > selectedProduct.quantity) {
+        setValidationErrors({
+          quantity: `Only ${selectedProduct.quantity} units available in stock (${existingItem.quantity} already added)`
+        });
+        return;
+      }
+      
+      updatedItems[existingItemIndex] = {
+        ...existingItem,
+        quantity: newQuantity,
+        subtotal: selectedProduct.price * newQuantity
+      };
+      setSaleItems(updatedItems);
+    } else {
+      // Add new item
+      const newItem = {
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: quantityNum,
+        price: selectedProduct.price,
+        subtotal: selectedProduct.price * quantityNum
+      };
+      setSaleItems([...saleItems, newItem]);
+    }
     
     // Update temporary stock
     setTempStockUpdates(prev => ({
@@ -575,16 +600,48 @@ function Sales() {
                 </td>
                 <td className="px-6 py-4 text-gray-700" style={{minWidth: '300px'}}>
                   <div className="space-y-1">
-                    {Array.isArray(sale.items) && sale.items?.map((item, index) => (
-                      <div key={index} className="text-sm flex items-center gap-2 flex-wrap">
-                        <span className="whitespace-nowrap">{item.product?.name || 'Unknown Product'} x {item.quantity}</span>
-                        {item.returnedQuantity > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 whitespace-nowrap">
-                            -{item.returnedQuantity} returned
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                    {(() => {
+                      // Calculate total returned quantity per product from returns data
+                      const returnedQuantities = {};
+                      if (Array.isArray(sale.returns)) {
+                        sale.returns.forEach(returnRecord => {
+                          if (returnRecord.items && Array.isArray(returnRecord.items)) {
+                            returnRecord.items.forEach(returnItem => {
+                              if (returnItem.productId) {
+                                returnedQuantities[returnItem.productId] = (returnedQuantities[returnItem.productId] || 0) + returnItem.quantity;
+                              }
+                            });
+                          }
+                        });
+                      }
+                      
+                      // Consolidate items by product ID for display
+                      const consolidatedItems = {};
+                      if (Array.isArray(sale.items)) {
+                        sale.items.forEach(item => {
+                          if (consolidatedItems[item.product?.id]) {
+                            consolidatedItems[item.product.id].quantity += item.quantity;
+                          } else {
+                            consolidatedItems[item.product?.id] = {
+                              product: item.product,
+                              quantity: item.quantity,
+                              returnedQuantity: returnedQuantities[item.product?.id] || 0
+                            };
+                          }
+                        });
+                      }
+                      
+                      return Object.values(consolidatedItems).map((item, index) => (
+                        <div key={item.product?.id || index} className="text-sm flex items-center gap-2 flex-wrap">
+                          <span className="whitespace-nowrap">{item.product?.name || 'Unknown Product'} x {item.quantity}</span>
+                          {item.returnedQuantity > 0 && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700 whitespace-nowrap">
+                              -{item.returnedQuantity} returned
+                            </span>
+                          )}
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-800">
