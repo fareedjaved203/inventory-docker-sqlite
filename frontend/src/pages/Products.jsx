@@ -509,12 +509,15 @@ function Products() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-xl border border-gray-200">
-            <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2 flex items-center gap-2">
-              <FaBoxOpen className="text-primary-600" />
-              {isEditMode ? 'Edit Product' : 'Add New Product'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="bg-white p-6 rounded-lg w-full max-w-md h-[90vh] shadow-xl border border-gray-200 flex flex-col">
+            <div className="flex-shrink-0">
+              <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2 flex items-center gap-2">
+                <FaBoxOpen className="text-primary-600" />
+                {isEditMode ? 'Edit Product' : 'Add New Product'}
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto px-1 py-2">
+              <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
@@ -647,25 +650,27 @@ function Products() {
                   <p className="text-xs text-gray-500 mt-1">Product will appear in low stock alerts when quantity ≤ this value</p>
                 </div>
               </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setValidationErrors({});
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded hover:from-primary-700 hover:to-primary-800 shadow-sm"
-                >
-                  {isEditMode ? 'Update' : 'Save'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
+            <div className="flex-shrink-0 mt-6 flex justify-end space-x-3 border-t border-gray-200 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setValidationErrors({});
+                }}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="product-form"
+                className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded hover:from-primary-700 hover:to-primary-800 shadow-sm"
+              >
+                {isEditMode ? 'Update' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}

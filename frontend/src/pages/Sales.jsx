@@ -769,7 +769,7 @@ function Sales() {
                 {isEditMode ? "Edit Sale" : "New Sale"}
               </h2>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-1 py-2">
               <form id="sale-form" onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-4 mb-4">
                 <div className="flex flex-col gap-4">

@@ -541,7 +541,7 @@ function BulkPurchasing() {
             <div className="flex-shrink-0">
               <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2">{isEditMode ? "Edit Purchase" : "New Purchase"}</h2>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-1 py-2">
               <form id="purchase-form" onSubmit={handleSubmit} className="space-y-4">
               {/* Contact Selection */}
               <div className="mb-4">
