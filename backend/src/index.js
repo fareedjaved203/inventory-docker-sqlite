@@ -93,28 +93,35 @@ app.get('/api/products', validateRequest({ query: querySchema }), async (req, re
 // Get low stock products
 app.get('/api/products/low-stock', validateRequest({ query: querySchema }), async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-    const where = {
-      quantity: {
-        lte: 10,
-      },
-    };
-
-    const [total, items] = await Promise.all([
-      prisma.product.count({ where }),
-      prisma.product.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { quantity: 'asc' },
-      }),
-    ]);
+    const { page = 1, limit = 10, search = '' } = req.query;
+    
+    // Get all products and filter by dynamic threshold
+    const allProducts = await prisma.product.findMany();
+    let lowStockProducts = allProducts.filter(product => 
+      Number(product.quantity) <= Number(product.lowStockThreshold || 10)
+    );
+    
+    // Apply search filter
+    if (search) {
+      lowStockProducts = lowStockProducts.filter(product =>
+        product.name.toLowerCase().includes(search.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(search.toLowerCase())) ||
+        (product.sku && product.sku.toLowerCase().includes(search.toLowerCase()))
+      );
+    }
+    
+    // Apply pagination
+    const total = lowStockProducts.length;
+    const items = lowStockProducts
+      .sort((a, b) => Number(a.quantity) - Number(b.quantity))
+      .slice((page - 1) * limit, page * limit);
 
     res.json({
       items: items.map(item => ({
         ...item,
         price: Number(item.price),
-        quantity: Number(item.quantity)
+        quantity: Number(item.quantity),
+        lowStockThreshold: Number(item.lowStockThreshold || 10)
       })),
       total,
       page,
@@ -413,13 +420,11 @@ app.get('/api/dashboard', async (req, res) => {
           quantity: true,
         },
       }),
-      prisma.product.count({
-        where: {
-          quantity: {
-            lte: 10,
-          },
-        },
-      }),
+      prisma.product.findMany().then(products => 
+        products.filter(product => 
+          Number(product.quantity) <= Number(product.lowStockThreshold || 10)
+        ).length
+      ),
       prisma.sale.aggregate({
         _sum: {
           totalAmount: true,

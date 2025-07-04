@@ -18,6 +18,7 @@ model Product {
   sku         String?
   quantity    BigInt
   damagedQuantity BigInt @default(0)
+  lowStockThreshold BigInt @default(10)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   SaleItem    SaleItem[]

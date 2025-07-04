@@ -6,6 +6,7 @@ export const productSchema = z.object({
   price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
   sku: z.string().optional(),
   quantity: z.number().int().min(0, "Quantity must be non-negative").max(1000000000, "Quantity cannot exceed 1 billion"),
+  lowStockThreshold: z.number().int().min(0, "Low stock threshold must be non-negative").optional(),
 });
 
 export const productUpdateSchema = productSchema.partial();

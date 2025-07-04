@@ -15,6 +15,7 @@ const productSchema = z.object({
   price: z.number().positive("Price must be positive").max(100000000, "Price cannot exceed Rs.10 Crores"),
   sku: z.string().optional(),
   quantity: z.number().int().min(0, "Quantity must be non-negative"),
+  lowStockThreshold: z.number().int().min(0, "Low stock threshold must be non-negative"),
 });
 
 function Products() {
@@ -42,6 +43,7 @@ function Products() {
     price: '',
     sku: '',
     quantity: '',
+    lowStockThreshold: '10',
   });
 
   // Reset page when switching between filters
@@ -68,7 +70,7 @@ function Products() {
       if (showLowStock) endpoint = '/api/products/low-stock';
       if (showDamaged) endpoint = '/api/products/damaged';
       
-      const searchParam = !showLowStock && !showDamaged ? `&search=${debouncedSearchTerm}` : '';
+      const searchParam = !showDamaged ? `&search=${debouncedSearchTerm}` : '';
       const response = await axios.get(
         `${import.meta.env.VITE_API_URL}${endpoint}?page=${currentPage}&limit=${itemsPerPage}${searchParam}`
       );
@@ -95,7 +97,7 @@ function Products() {
       onSuccess: () => {
         queryClient.invalidateQueries(['products']);
         setIsModalOpen(false);
-        setFormData({ name: '', description: '', price: '', sku: '', quantity: '' });
+        setFormData({ name: '', description: '', price: '', sku: '', quantity: '', lowStockThreshold: '10' });
         setIsEditMode(false);
         setValidationErrors({});
       },
@@ -141,7 +143,7 @@ function Products() {
       onSuccess: () => {
         queryClient.invalidateQueries(['products']);
         setIsModalOpen(false);
-        setFormData({ name: '', description: '', price: '', sku: '', quantity: '' });
+        setFormData({ name: '', description: '', price: '', sku: '', quantity: '', lowStockThreshold: '10' });
         setValidationErrors({});
       },
       onError: (error) => {
@@ -210,6 +212,7 @@ function Products() {
       ...formData,
       price: parseFloat(formData.price),
       quantity: parseInt(formData.quantity),
+      lowStockThreshold: parseInt(formData.lowStockThreshold),
     };
 
     try {
@@ -240,6 +243,7 @@ function Products() {
       price: product.price.toString(),
       sku: product.sku,
       quantity: product.quantity.toString(),
+      lowStockThreshold: (product.lowStockThreshold || 10).toString(),
     });
     setIsEditMode(true);
     setIsModalOpen(true);
@@ -286,17 +290,23 @@ function Products() {
           )}
         </div>
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
-          {!showLowStock && (
+          {!showDamaged && (
             <div className="relative">
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Search products..."
+                placeholder={showLowStock ? "Search low stock products..." : "Search products..."}
                 value={searchTerm}
                 onChange={handleSearchChange}
-                className="w-full sm:w-64 pl-10 pr-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`w-full sm:w-64 pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                  showLowStock 
+                    ? 'border-orange-200 focus:ring-orange-500' 
+                    : 'border-primary-200 focus:ring-primary-500'
+                }`}
               />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-primary-400">
+              <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
+                showLowStock ? 'text-orange-400' : 'text-primary-400'
+              }`}>
                 <FaSearch />
               </div>
             </div>
@@ -343,7 +353,8 @@ function Products() {
                   description: '',
                   price: '',
                   sku: '',
-                  quantity: ''
+                  quantity: '',
+                  lowStockThreshold: '10'
                 });
                 setValidationErrors({});
                 setIsModalOpen(true);
@@ -375,7 +386,7 @@ function Products() {
                 <td className="px-6 py-4 whitespace-nowrap font-medium text-primary-800">{formatPakistaniCurrency(product.price)}</td>
                 <td className="px-6 py-4 whitespace-nowrap hidden sm:table-cell">
                   <span className={`${
-                    product.quantity <= 10 
+                    product.quantity <= (product.lowStockThreshold || 10)
                       ? 'text-orange-700 bg-orange-50 border border-orange-200' 
                       : 'text-green-700 bg-green-50 border border-green-200'
                   } px-2 py-1 rounded-full text-xs font-medium`}>
@@ -571,6 +582,26 @@ function Products() {
                   {validationErrors.quantity && (
                     <p className="text-red-500 text-sm mt-1">{validationErrors.quantity}</p>
                   )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-orange-500">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                    </svg>
+                    Low Stock Alert Threshold
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formData.lowStockThreshold}
+                    onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
+                    className="w-full px-3 py-2 border border-orange-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="10"
+                  />
+                  {validationErrors.lowStockThreshold && (
+                    <p className="text-red-500 text-sm mt-1">{validationErrors.lowStockThreshold}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">Product will appear in low stock alerts when quantity ≤ this value</p>
                 </div>
               </div>
               <div className="mt-6 flex justify-end space-x-3">
