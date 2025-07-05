@@ -10,10 +10,16 @@ function GenerateTodayInvoiceButton({ sales }) {
     return response.data;
   });
 
-  const today = new Date().toISOString().split('T')[0];
-  const todaySales = sales?.items?.filter(sale => 
-    new Date(sale.saleDate).toISOString().split('T')[0] === today
-  ) || [];
+  // Get today's date in Pakistan timezone
+  const now = new Date();
+  const pakistanTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Karachi"}));
+  const today = pakistanTime.toISOString().split('T')[0];
+  
+  const todaySales = sales?.items?.filter(sale => {
+    // Convert sale date to Pakistan timezone for comparison
+    const saleDate = new Date(sale.saleDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+    return saleDate === today;
+  }) || [];
 
   return (
     <button

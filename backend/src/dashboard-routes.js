@@ -4,17 +4,14 @@ export function setupDashboardRoutes(app, prisma) {
   // Get enhanced dashboard stats
   app.get('/api/dashboard/stats', async (req, res) => {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // Get current Pakistan time using Asia/Karachi timezone
+      const now = new Date();
+      const pakistanTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Karachi"}));
+      const todayPakistan = new Date(pakistanTime.getFullYear(), pakistanTime.getMonth(), pakistanTime.getDate(), 0, 0, 0, 0);
       
-      const sevenDaysAgo = new Date(today);
-      sevenDaysAgo.setDate(today.getDate() - 7);
-      
-      const thirtyDaysAgo = new Date(today);
-      thirtyDaysAgo.setDate(today.getDate() - 30);
-      
-      const yearAgo = new Date(today);
-      yearAgo.setDate(today.getDate() - 365);
+      const sevenDaysAgo = new Date(todayPakistan.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const thirtyDaysAgo = new Date(todayPakistan.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const yearAgo = new Date(todayPakistan.getTime() - 365 * 24 * 60 * 60 * 1000);
 
       const [
         salesToday,
@@ -34,7 +31,8 @@ export function setupDashboardRoutes(app, prisma) {
           _sum: { totalAmount: true },
           where: {
             saleDate: {
-              gte: today
+              gte: todayPakistan,
+              lt: new Date(todayPakistan.getTime() + 24 * 60 * 60 * 1000)
             }
           }
         }),
@@ -95,7 +93,8 @@ export function setupDashboardRoutes(app, prisma) {
         prisma.sale.findMany({
           where: {
             saleDate: {
-              gte: today
+              gte: todayPakistan,
+              lt: new Date(todayPakistan.getTime() + 24 * 60 * 60 * 1000)
             }
           },
           include: {

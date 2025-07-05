@@ -279,7 +279,7 @@ function Sales() {
       updatedItems[existingItemIndex] = {
         ...existingItem,
         quantity: newQuantity,
-        subtotal: selectedProduct.price * newQuantity
+        subtotal: existingItem.price * newQuantity
       };
       setSaleItems(updatedItems);
     } else {
@@ -305,6 +305,17 @@ function Sales() {
     setProductSearchTerm("");
     setValidationErrors({});
     isProductSelected(false);
+  };
+
+  const handlePriceChange = (index, newPrice) => {
+    const updatedItems = [...saleItems];
+    const price = parseFloat(newPrice) || 0;
+    updatedItems[index] = {
+      ...updatedItems[index],
+      price: price,
+      subtotal: price * updatedItems[index].quantity
+    };
+    setSaleItems(updatedItems);
   };
 
   const handleRemoveItem = (index) => {
@@ -587,7 +598,7 @@ function Sales() {
                   #{sale.billNumber}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-700">
-                  {new Date(sale.saleDate).toLocaleDateString('en-GB')}
+                  {new Date(sale.saleDate).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-700">
                   {sale.contact ? (
@@ -847,19 +858,38 @@ function Sales() {
                   <p className="text-gray-500 text-sm italic">No items added yet</p>
                 ) : (
                   saleItems?.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center py-2 border-b border-primary-100 last:border-b-0">
-                      <div>
-                        <span className="font-medium text-primary-700">{item.productName}</span> 
-                        <span className="text-gray-600"> x {item.quantity} = </span>
-                        <span className="text-primary-800">{formatPakistaniCurrency(item.subtotal)}</span>
+                    <div key={index} className="py-2 border-b border-primary-100 last:border-b-0">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium text-primary-700">{item.productName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(index)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          Remove
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Remove
-                      </button>
+                      <div className="grid grid-cols-3 gap-2 items-center text-sm">
+                        <div>
+                          <label className="text-xs text-gray-500">Qty</label>
+                          <div className="font-medium">{item.quantity}</div>
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500">Price</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={item.price}
+                            onChange={(e) => handlePriceChange(index, e.target.value)}
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500">Subtotal</label>
+                          <div className="font-medium text-primary-800">{formatPakistaniCurrency(item.subtotal)}</div>
+                        </div>
+                      </div>
                     </div>
                   ))
                 )}

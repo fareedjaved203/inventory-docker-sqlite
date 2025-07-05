@@ -4,8 +4,10 @@ import { saleSchema, querySchema } from './schemas.js';
 
 // Helper function to get current time in Pakistan and store as UTC
 function getCurrentPakistanTime() {
+  // Get current time in Pakistan timezone (UTC+5)
   const now = new Date();
-  return now;
+  const pakistanTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Karachi"}));
+  return pakistanTime;
 }
 
 // Helper function to create date from YYYY-MM-DD string in Pakistan timezone
@@ -13,10 +15,11 @@ function createPakistanDate(dateString) {
   if (!dateString) return getCurrentPakistanTime();
   
   const [year, month, day] = dateString.split('-').map(Number);
-  const now = new Date();
+  const pakistanTime = new Date();
+  const currentPakTime = new Date(pakistanTime.toLocaleString("en-US", {timeZone: "Asia/Karachi"}));
   
-  const pakistanDate = new Date(year, month - 1, day, now.getHours(), now.getMinutes(), now.getSeconds());
-  
+  // Create date in Pakistan timezone with current time
+  const pakistanDate = new Date(year, month - 1, day, currentPakTime.getHours(), currentPakTime.getMinutes(), currentPakTime.getSeconds());
   return pakistanDate;
 }
 
