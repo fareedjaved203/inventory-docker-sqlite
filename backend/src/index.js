@@ -12,6 +12,7 @@ import { setupDashboardRoutes } from './dashboard-routes.js';
 import { setupUserRoutes } from './user-routes.js';
 import { setupShopSettingsRoutes } from './shop-settings-routes.js';
 import { setupReturnRoutes } from './return-routes.js';
+import { setupLoanRoutes } from './loan-routes.js';
 import { validateRequest } from './middleware.js';
 
 dotenv.config();
@@ -48,6 +49,7 @@ setupDashboardRoutes(app, prisma);
 setupUserRoutes(app, prisma);
 setupShopSettingsRoutes(app, prisma);
 setupReturnRoutes(app, prisma);
+setupLoanRoutes(app, prisma);
 
 // Get all products with search and pagination
 app.get('/api/products', validateRequest({ query: querySchema }), async (req, res) => {

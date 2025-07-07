@@ -65,6 +65,7 @@ model Contact {
   updatedAt DateTime @updatedAt
   purchases BulkPurchase[]
   sales     Sale[]
+  loanTransactions LoanTransaction[]
 }
 
 model BulkPurchase {
@@ -118,6 +119,18 @@ model SaleReturnItem {
   productId    String
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+}
+
+model LoanTransaction {
+  id          String   @id @default(uuid())
+  amount      BigInt
+  type        String   // 'GIVEN', 'TAKEN', 'RETURNED_BY_CONTACT', 'RETURNED_TO_CONTACT'
+  description String?
+  date        DateTime @default(now())
+  contact     Contact  @relation(fields: [contactId], references: [id])
+  contactId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model ShopSettings {

@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form';
 import DeleteModal from '../components/DeleteModal';
 import TableSkeleton from '../components/TableSkeleton';
 import { debounce } from 'lodash';
-import { FaSearch, FaBuilding, FaMapMarkerAlt, FaPhone, FaUserPlus } from 'react-icons/fa';
+import { FaSearch, FaBuilding, FaMapMarkerAlt, FaPhone, FaUserPlus, FaDollarSign } from 'react-icons/fa';
+import { formatPakistaniCurrency } from '../utils/formatCurrency';
 
 function Contacts() {
   const queryClient = useQueryClient();
@@ -17,6 +18,11 @@ function Contacts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [deleteError, setDeleteError] = useState(null);
+  const [showLoanModal, setShowLoanModal] = useState(false);
+  const [loanAmount, setLoanAmount] = useState('');
+  const [loanType, setLoanType] = useState('GIVEN');
+  const [loanDescription, setLoanDescription] = useState('');
+  const [loanTransactions, setLoanTransactions] = useState([]);
 
   const {
     register,
@@ -121,6 +127,37 @@ function Contacts() {
     }
   );
 
+  // Fetch loan transactions for selected contact
+  const { data: loanData } = useQuery(
+    ['loan-transactions', selectedContact?.id],
+    async () => {
+      if (!selectedContact?.id) return null;
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/contacts/${selectedContact.id}/loans`
+      );
+      return response.data;
+    },
+    { enabled: !!selectedContact?.id && showLoanModal }
+  );
+
+  // Create loan transaction mutation
+  const createLoanTransaction = useMutation(
+    async (data) => {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/contacts/${selectedContact.id}/loans`,
+        data
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['loan-transactions', selectedContact?.id]);
+        setLoanAmount('');
+        setLoanDescription('');
+      }
+    }
+  );
+
   const onSubmit = (data) => {
     if (selectedContact) {
       updateContact.mutate({ id: selectedContact.id, data });
@@ -141,6 +178,16 @@ function Contacts() {
     setValue('address', contact.address);
     setValue('phoneNumber', contact.phoneNumber);
     setShowAddModal(true);
+  };
+
+  const handleAddLoan = () => {
+    if (!loanAmount || parseFloat(loanAmount) <= 0) return;
+    
+    createLoanTransaction.mutate({
+      amount: parseFloat(loanAmount),
+      type: loanType,
+      description: loanDescription
+    });
   };
 
   if (isLoading) return (
@@ -230,6 +277,18 @@ function Contacts() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                       </svg>
                       Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedContact(contact);
+                        setShowLoanModal(true);
+                      }}
+                      className="text-green-600 hover:text-green-900 inline-flex items-center gap-1"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Loans
                     </button>
                     <button
                       onClick={() => {
@@ -367,6 +426,147 @@ function Contacts() {
           }}
           error={deleteError}
         />
+      )}
+
+      {/* Loan Tracking Modal */}
+      {showLoanModal && selectedContact && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-2xl h-[90vh] shadow-xl border border-gray-200 flex flex-col">
+            <div className="flex-shrink-0">
+              <h2 className="text-2xl font-bold mb-6 text-primary-800 border-b border-primary-100 pb-2 flex items-center gap-2">
+                <FaDollarSign className="text-green-600" />
+                Loan Tracking - {selectedContact.name}
+              </h2>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-1 py-2">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h3 className="text-sm font-medium text-green-700">Loan Given</h3>
+                  <p className="text-lg font-bold text-green-800">
+                    {formatPakistaniCurrency(loanData?.totalGiven || 0)}
+                  </p>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-medium text-blue-700">Loan Taken</h3>
+                  <p className="text-lg font-bold text-blue-800">
+                    {formatPakistaniCurrency(loanData?.totalTaken || 0)}
+                  </p>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                  <h3 className="text-sm font-medium text-purple-700">Returned by Contact</h3>
+                  <p className="text-lg font-bold text-purple-800">
+                    {formatPakistaniCurrency(loanData?.totalReturnedByContact || 0)}
+                  </p>
+                </div>
+                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                  <h3 className="text-sm font-medium text-orange-700">Returned to Contact</h3>
+                  <p className="text-lg font-bold text-orange-800">
+                    {formatPakistaniCurrency(loanData?.totalReturnedToContact || 0)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Add New Transaction */}
+              <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                <h3 className="font-medium mb-4">Add New Transaction</h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select
+                      value={loanType}
+                      onChange={(e) => setLoanType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="GIVEN">Loan Given</option>
+                      <option value="TAKEN">Loan Taken</option>
+                      <option value="RETURNED_BY_CONTACT">Returned by Contact</option>
+                      <option value="RETURNED_TO_CONTACT">Returned to Contact</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                    <input
+                      type="number"
+                      value={loanAmount}
+                      onChange={(e) => setLoanAmount(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={loanDescription}
+                      onChange={(e) => setLoanDescription(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Optional note"
+                    />
+                  </div>
+                  <div className="self-end">
+                    <button
+                      onClick={handleAddLoan}
+                      className="w-full px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Transaction History */}
+              <div>
+                <h3 className="font-medium mb-4">Transaction History</h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {loanData?.transactions?.map((transaction) => (
+                    <div key={transaction.id} className="flex justify-between items-center p-3 bg-white border rounded-lg">
+                      <div>
+                        <div className="font-medium">
+                          {transaction.type === 'GIVEN' && 'Loan Given'}
+                          {transaction.type === 'TAKEN' && 'Loan Taken'}
+                          {transaction.type === 'RETURNED_BY_CONTACT' && 'Returned by Contact'}
+                          {transaction.type === 'RETURNED_TO_CONTACT' && 'Returned to Contact'}
+                        </div>
+                        {transaction.description && (
+                          <div className="text-sm text-gray-600">{transaction.description}</div>
+                        )}
+                        <div className="text-xs text-gray-500">
+                          {new Date(transaction.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className={`font-bold ${
+                        transaction.type === 'GIVEN' ? 'text-green-600' :
+                        transaction.type === 'TAKEN' ? 'text-blue-600' :
+                        transaction.type === 'RETURNED_BY_CONTACT' ? 'text-purple-600' :
+                        'text-orange-600'
+                      }`}>
+                        {formatPakistaniCurrency(transaction.amount)}
+                      </div>
+                    </div>
+                  )) || (
+                    <p className="text-gray-500 text-center py-4">No transactions yet</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-shrink-0 mt-6 flex justify-end border-t border-gray-200 pt-4">
+              <button
+                onClick={() => {
+                  setShowLoanModal(false);
+                  setSelectedContact(null);
+                  setLoanAmount('');
+                  setLoanDescription('');
+                }}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
