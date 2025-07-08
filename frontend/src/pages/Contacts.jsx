@@ -449,7 +449,7 @@ function Contacts() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Money Given
+                  Loan Given
                 </button>
                 <button
                   onClick={() => setActiveTab('taken')}
@@ -459,7 +459,7 @@ function Contacts() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Money Taken
+                  Loan Taken
                 </button>
               </div>
             </div>
@@ -471,13 +471,13 @@ function Contacts() {
                   {/* Summary Cards */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h3 className="text-sm font-medium text-green-700">Total Given</h3>
+                      <h3 className="text-sm font-medium text-green-700">Total Loan Given</h3>
                       <p className="text-2xl font-bold text-green-800">
                         {formatPakistaniCurrency(loanData?.totalGiven || 0)}
                       </p>
                     </div>
                     <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                      <h3 className="text-sm font-medium text-purple-700">Returned by Contact</h3>
+                      <h3 className="text-sm font-medium text-purple-700">Loan Returned by {selectedContact.name}</h3>
                       <p className="text-2xl font-bold text-purple-800">
                         {formatPakistaniCurrency(loanData?.totalReturnedByContact || 0)}
                       </p>
@@ -486,7 +486,7 @@ function Contacts() {
                   
                   {/* Outstanding Balance */}
                   <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <h3 className="text-sm font-medium text-yellow-700">Outstanding Balance</h3>
+                    <h3 className="text-sm font-medium text-yellow-700">Outstanding Balance ({selectedContact.name} need to pay)</h3>
                     <p className="text-xl font-bold text-yellow-800">
                       {formatPakistaniCurrency((loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0))}
                     </p>
@@ -503,7 +503,7 @@ function Contacts() {
                           onChange={(e) => setLoanType(e.target.value)}
                           className="w-full px-3 py-2 border border-green-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                         >
-                          <option value="GIVEN">Give Money</option>
+                          <option value="GIVEN">Give Loan</option>
                           <option value="RETURNED_BY_CONTACT">Received Back</option>
                         </select>
                       </div>
@@ -546,7 +546,7 @@ function Contacts() {
                         <div key={transaction.id} className="flex justify-between items-center p-3 bg-white border border-green-200 rounded-lg">
                           <div>
                             <div className="font-medium">
-                              {transaction.type === 'GIVEN' ? '💸 Money Given' : '💰 Money Received Back'}
+                              {transaction.type === 'GIVEN' ? '💸 Loan Given' : '💰 Loan Received Back'}
                             </div>
                             {transaction.description && (
                               <div className="text-sm text-gray-600">{transaction.description}</div>
@@ -575,13 +575,13 @@ function Contacts() {
                   {/* Summary Cards */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h3 className="text-sm font-medium text-blue-700">Total Taken</h3>
+                      <h3 className="text-sm font-medium text-blue-700">Total Loan Taken</h3>
                       <p className="text-2xl font-bold text-blue-800">
                         {formatPakistaniCurrency(loanData?.totalTaken || 0)}
                       </p>
                     </div>
                     <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                      <h3 className="text-sm font-medium text-orange-700">Returned to Contact</h3>
+                      <h3 className="text-sm font-medium text-orange-700">Loan Returned to {selectedContact.name}</h3>
                       <p className="text-2xl font-bold text-orange-800">
                         {formatPakistaniCurrency(loanData?.totalReturnedToContact || 0)}
                       </p>
@@ -590,7 +590,7 @@ function Contacts() {
                   
                   {/* Outstanding Debt */}
                   <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h3 className="text-sm font-medium text-red-700">Outstanding Debt</h3>
+                    <h3 className="text-sm font-medium text-red-700">Outstanding Debt (You need to pay)</h3>
                     <p className="text-xl font-bold text-red-800">
                       {formatPakistaniCurrency((loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0))}
                     </p>
@@ -607,8 +607,8 @@ function Contacts() {
                           onChange={(e) => setLoanType(e.target.value)}
                           className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="TAKEN">Take Money</option>
-                          <option value="RETURNED_TO_CONTACT">Return Money</option>
+                          <option value="TAKEN">Take Loan</option>
+                          <option value="RETURNED_TO_CONTACT">Return Loan</option>
                         </select>
                       </div>
                       <div>
@@ -650,7 +650,7 @@ function Contacts() {
                         <div key={transaction.id} className="flex justify-between items-center p-3 bg-white border border-blue-200 rounded-lg">
                           <div>
                             <div className="font-medium">
-                              {transaction.type === 'TAKEN' ? '💵 Money Taken' : '💳 Money Returned'}
+                              {transaction.type === 'TAKEN' ? '💵 Loan Taken' : '💳 Loan Returned'}
                             </div>
                             {transaction.description && (
                               <div className="text-sm text-gray-600">{transaction.description}</div>

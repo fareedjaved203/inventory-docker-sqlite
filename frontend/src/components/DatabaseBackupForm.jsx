@@ -16,10 +16,10 @@ function DatabaseBackupForm() {
   });
 
   useEffect(() => {
-    if (shopSettings?.email && !email) {
+    if (shopSettings?.email && email === '') {
       setEmail(shopSettings.email);
     }
-  }, [shopSettings, email]);
+  }, [shopSettings]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
