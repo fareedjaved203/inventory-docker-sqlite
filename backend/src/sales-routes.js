@@ -393,9 +393,20 @@ export function setupSalesRoutes(app, prisma) {
           };
         } else {
           where = {
-            billNumber: {
-              contains: search
-            }
+            OR: [
+              {
+                billNumber: {
+                  contains: search
+                }
+              },
+              {
+                contact: {
+                  name: {
+                    contains: search
+                  }
+                }
+              }
+            ]
           };
         }
       }
