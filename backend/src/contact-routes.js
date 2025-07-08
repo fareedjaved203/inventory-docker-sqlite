@@ -142,6 +142,11 @@ export function setupContactRoutes(app, prisma) {
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Contact not found' });
       }
+      if (error.code === 'P2003' || error.message.includes('foreign key')) {
+        return res.status(400).json({ 
+          error: 'Cannot delete this contact because it is associated with existing sales or purchases. Please remove all related transactions first.' 
+        });
+      }
       res.status(500).json({ error: error.message });
     }
   });

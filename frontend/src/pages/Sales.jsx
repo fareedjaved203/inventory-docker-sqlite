@@ -150,7 +150,7 @@ function Sales() {
 
   // Fetch sales
   const { data: sales, isLoading } = useQuery(
-    ['sales', selectedDate ? `${selectedDate.split('-')[2]}/${selectedDate.split('-')[1]}/${selectedDate.split('-')[0]}` : debouncedSearchTerm, showPendingPayments, showCreditBalance],
+    ['sales', selectedDate ? `${selectedDate.split('-')[2]}/${selectedDate.split('-')[1]}/${selectedDate.split('-')[0]}` : debouncedSearchTerm, showPendingPayments, showCreditBalance, currentPage],
     async () => {
       let endpoint = '/api/sales';
       if (showPendingPayments) endpoint = '/api/sales/pending-payments';
