@@ -133,21 +133,45 @@ export function setupContactRoutes(app, prisma) {
   // Delete a contact
   app.delete('/api/contacts/:id', async (req, res) => {
     try {
-      await prisma.contact.delete({
-        where: { id: req.params.id },
+      const contactId = req.params.id;
+      
+      // Check what's preventing deletion
+      const [sales, purchases, loans] = await Promise.all([
+        prisma.sale.count({ where: { contactId } }),
+        prisma.bulkPurchase.count({ where: { contactId } }),
+        prisma.loanTransaction.count({ where: { contactId } })
+      ]);
+      
+      if (sales > 0 || purchases > 0) {
+        const references = [];
+        if (sales > 0) references.push(`${sales} sale(s)`);
+        if (purchases > 0) references.push(`${purchases} purchase(s)`);
+        
+        return res.status(400).json({ 
+          error: `Cannot delete contact. It is linked to ${references.join(' and ')}.` 
+        });
+      }
+      
+      // Delete loan transactions first, then contact
+      await prisma.$transaction(async (prisma) => {
+        if (loans > 0) {
+          await prisma.loanTransaction.deleteMany({
+            where: { contactId }
+          });
+        }
+        
+        await prisma.contact.delete({
+          where: { id: contactId }
+        });
       });
       
       res.status(204).send();
     } catch (error) {
+      console.error('Contact deletion error:', error);
       if (error.code === 'P2025') {
         return res.status(404).json({ error: 'Contact not found' });
       }
-      if (error.code === 'P2003' || error.message.includes('foreign key')) {
-        return res.status(400).json({ 
-          error: 'Cannot delete this contact because it is associated with existing sales or purchases. Please remove all related transactions first.' 
-        });
-      }
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: 'Failed to delete contact. Please try again.' });
     }
   });
 }

@@ -75,4 +75,31 @@ export function setupLoanRoutes(app, prisma) {
       res.status(400).json({ error: error.message });
     }
   });
+
+  // Delete a loan transaction
+  app.delete('/api/contacts/:contactId/loans/:transactionId', async (req, res) => {
+    try {
+      const { contactId, transactionId } = req.params;
+      
+      // Verify transaction belongs to the contact
+      const transaction = await prisma.loanTransaction.findFirst({
+        where: {
+          id: transactionId,
+          contactId
+        }
+      });
+      
+      if (!transaction) {
+        return res.status(404).json({ error: 'Transaction not found' });
+      }
+      
+      await prisma.loanTransaction.delete({
+        where: { id: transactionId }
+      });
+      
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }

@@ -159,6 +159,21 @@ function Contacts() {
     }
   );
 
+  // Delete loan transaction mutation
+  const deleteLoanTransaction = useMutation(
+    async (transactionId) => {
+      const response = await axios.delete(
+        `${import.meta.env.VITE_API_URL}/api/contacts/${selectedContact.id}/loans/${transactionId}`
+      );
+      return response.data;
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['loan-transactions', selectedContact?.id]);
+      }
+    }
+  );
+
   const onSubmit = (data) => {
     if (selectedContact) {
       updateContact.mutate({ id: selectedContact.id, data });
@@ -485,10 +500,27 @@ function Contacts() {
                   </div>
                   
                   {/* Outstanding Balance */}
-                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                    <h3 className="text-sm font-medium text-yellow-700">Outstanding Balance ({selectedContact.name} need to pay)</h3>
-                    <p className="text-xl font-bold text-yellow-800">
-                      {formatPakistaniCurrency((loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0))}
+                  <div className={`p-4 rounded-lg border ${
+                    (loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0) >= 0
+                      ? 'bg-yellow-50 border-yellow-200'
+                      : 'bg-green-50 border-green-200'
+                  }`}>
+                    <h3 className={`text-sm font-medium ${
+                      (loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0) >= 0
+                        ? 'text-yellow-700'
+                        : 'text-green-700'
+                    }`}>
+                      {(loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0) >= 0
+                        ? `${selectedContact.name} has to pay you`
+                        : `You have to pay ${selectedContact.name}`
+                      }
+                    </h3>
+                    <p className={`text-xl font-bold ${
+                      (loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0) >= 0
+                        ? 'text-yellow-800'
+                        : 'text-green-800'
+                    }`}>
+                      {formatPakistaniCurrency(Math.abs((loanData?.totalGiven || 0) - (loanData?.totalReturnedByContact || 0)))}
                     </p>
                   </div>
 
@@ -555,10 +587,20 @@ function Contacts() {
                               {new Date(transaction.date).toLocaleDateString()}
                             </div>
                           </div>
-                          <div className={`font-bold ${
-                            transaction.type === 'GIVEN' ? 'text-green-600' : 'text-purple-600'
-                          }`}>
-                            {formatPakistaniCurrency(transaction.amount)}
+                          <div className="flex items-center gap-3">
+                            <div className={`font-bold ${
+                              transaction.type === 'GIVEN' ? 'text-green-600' : 'text-purple-600'
+                            }`}>
+                              {formatPakistaniCurrency(transaction.amount)}
+                            </div>
+                            <button
+                              onClick={() => deleteLoanTransaction.mutate(transaction.id)}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m6.5 0a48.667 48.667 0 00-7.5 0" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       )) || (
@@ -589,10 +631,27 @@ function Contacts() {
                   </div>
                   
                   {/* Outstanding Debt */}
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h3 className="text-sm font-medium text-red-700">Outstanding Debt (You need to pay)</h3>
-                    <p className="text-xl font-bold text-red-800">
-                      {formatPakistaniCurrency((loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0))}
+                  <div className={`p-4 rounded-lg border ${
+                    (loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0) >= 0
+                      ? 'bg-red-50 border-red-200'
+                      : 'bg-blue-50 border-blue-200'
+                  }`}>
+                    <h3 className={`text-sm font-medium ${
+                      (loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0) >= 0
+                        ? 'text-red-700'
+                        : 'text-blue-700'
+                    }`}>
+                      {(loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0) >= 0
+                        ? `You have to pay ${selectedContact.name}`
+                        : `${selectedContact.name} has to pay you`
+                      }
+                    </h3>
+                    <p className={`text-xl font-bold ${
+                      (loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0) >= 0
+                        ? 'text-red-800'
+                        : 'text-blue-800'
+                    }`}>
+                      {formatPakistaniCurrency(Math.abs((loanData?.totalTaken || 0) - (loanData?.totalReturnedToContact || 0)))}
                     </p>
                   </div>
 
@@ -659,10 +718,20 @@ function Contacts() {
                               {new Date(transaction.date).toLocaleDateString()}
                             </div>
                           </div>
-                          <div className={`font-bold ${
-                            transaction.type === 'TAKEN' ? 'text-blue-600' : 'text-orange-600'
-                          }`}>
-                            {formatPakistaniCurrency(transaction.amount)}
+                          <div className="flex items-center gap-3">
+                            <div className={`font-bold ${
+                              transaction.type === 'TAKEN' ? 'text-blue-600' : 'text-orange-600'
+                            }`}>
+                              {formatPakistaniCurrency(transaction.amount)}
+                            </div>
+                            <button
+                              onClick={() => deleteLoanTransaction.mutate(transaction.id)}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m6.5 0a48.667 48.667 0 00-7.5 0" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
                       )) || (
