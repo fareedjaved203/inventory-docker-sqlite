@@ -573,7 +573,7 @@ function Sales() {
             >
               New Sale
             </button>
-            <GenerateTodayInvoiceButton sales={sales}/>
+            {/* <GenerateTodayInvoiceButton sales={sales}/> */}
           </div>
         </div>
       </div>
