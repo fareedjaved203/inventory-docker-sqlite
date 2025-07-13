@@ -432,25 +432,44 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           )}
 
         <View style={styles.footer} fixed={false}>
-          {shopSettings && (
-            <View>
-              {shopSettings.userName1 && (
-                <Text style={styles.contactInfo}>
-                  {shopSettings.userName1}: {shopSettings.userPhone1}
-                </Text>
-              )}
-              {shopSettings.userName2 && (
-                <Text style={styles.contactInfo}>
-                  {shopSettings.userName2}: {shopSettings.userPhone2}
-                </Text>
-              )}
-              {shopSettings.userName3 && (
-                <Text style={styles.contactInfo}>
-                  {shopSettings.userName3}: {shopSettings.userPhone3}
-                </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              {shopSettings && (
+                <View>
+                  {shopSettings.userName1 && (
+                    <Text style={styles.contactInfo}>
+                      {shopSettings.userName1}: {shopSettings.userPhone1}
+                    </Text>
+                  )}
+                  {shopSettings.userName2 && (
+                    <Text style={styles.contactInfo}>
+                      {shopSettings.userName2}: {shopSettings.userPhone2}
+                    </Text>
+                  )}
+                  {shopSettings.userName3 && (
+                    <Text style={styles.contactInfo}>
+                      {shopSettings.userName3}: {shopSettings.userPhone3}
+                    </Text>
+                  )}
+                </View>
               )}
             </View>
-          )}
+            <View style={{ textAlign: 'right' }}>
+              <View style={{ border: '1px solid #666', padding: 5, borderRadius: 3 }}>
+                <Text style={styles.contactInfo}>
+                  Goods will not be returned or exchanged after use.
+                </Text>
+                <Text style={styles.contactInfo}>
+                  No Return / Exchange after use.
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View style={{ borderTop: '1px solid #ccc', marginTop: 10, paddingTop: 8 }}>
+            <Text style={{ fontSize: 8, textAlign: 'center', color: '#666' }}>
+              Need system like this? contact 03145292649
+            </Text>
+          </View>
         </View>
       </Page>
     </Document>

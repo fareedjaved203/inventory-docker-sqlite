@@ -1,14 +1,24 @@
-import React from 'react';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import DateInvoicePDF from './DateInvoicePDF';
 
 function GenerateTodayInvoiceButton({ sales }) {
-  const { data: shopSettings } = useQuery(['shop-settings'], async () => {
-    const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/shop-settings`);
-    return response.data;
-  });
+  const [shopSettings, setShopSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchShopSettings = async () => {
+      try {
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/shop-settings`);
+        setShopSettings(response.data);
+      } catch (error) {
+        console.error('Failed to fetch shop settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShopSettings();
+  }, []);
 
   // Get today's date in Pakistan timezone
   const now = new Date();
@@ -16,39 +26,61 @@ function GenerateTodayInvoiceButton({ sales }) {
   const today = pakistanTime.toISOString().split('T')[0];
   
   const todaySales = sales?.items?.filter(sale => {
-    // Convert sale date to Pakistan timezone for comparison
-    const saleDate = new Date(sale.saleDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
-    return saleDate === today;
+    try {
+      const saleDate = new Date(sale.saleDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
+      return saleDate === today;
+    } catch (error) {
+      return false;
+    }
   }) || [];
+
+  const handleGeneratePDF = async () => {
+    if (!todaySales.length || !shopSettings) return;
+    
+    try {
+      const { PDFDownloadLink, pdf } = await import('@react-pdf/renderer');
+      const { default: SimpleDateInvoicePDF } = await import('./SimpleDateInvoicePDF');
+      
+      const blob = await pdf(<SimpleDateInvoicePDF date={today} sales={todaySales} shopSettings={shopSettings} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `daily-sales-${today}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <button
+        className="bg-gray-400 text-white px-4 py-2 rounded-lg cursor-not-allowed whitespace-nowrap flex items-center gap-2"
+        disabled
+      >
+        Loading...
+      </button>
+    );
+  }
 
   return (
     <button
-      className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2 rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm whitespace-nowrap flex items-center gap-2"
+      onClick={handleGeneratePDF}
       disabled={todaySales.length === 0}
+      className={`px-4 py-2 rounded-lg whitespace-nowrap flex items-center gap-2 ${
+        todaySales.length === 0
+          ? 'bg-gray-400 text-white cursor-not-allowed'
+          : 'bg-gradient-to-r from-primary-600 to-primary-700 text-white hover:from-primary-700 hover:to-primary-800 shadow-sm'
+      }`}
     >
-      {todaySales.length > 0 ? (
-        <PDFDownloadLink
-          document={<DateInvoicePDF date={today} sales={todaySales} shopSettings={shopSettings} />}
-          fileName={`daily-sales-${today}.pdf`}
-          className="flex items-center gap-2"
-        >
-          {({ loading }) => (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
-              </svg>
-              {loading ? 'Preparing Invoice...' : 'Generate Today\'s Invoice'}
-            </>
-          )}
-        </PDFDownloadLink>
-      ) : (
-        <>
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
-          </svg>
-          No Sales Today
-        </>
-      )}
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+      </svg>
+      {todaySales.length > 0 
+        ? `Generate Today's Invoice (${todaySales.length})` 
+        : 'No Sales Today'
+      }
     </button>
   );
 }
