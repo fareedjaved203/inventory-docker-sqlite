@@ -105,39 +105,59 @@ class EmailService {
       throw new Error(`Database file not found at ${this.dbPath}`);
     }
 
-    console.log(`Sending database backup from: ${this.dbPath}`);
+    console.log(`Sending compressed database backup from: ${this.dbPath}`);
 
     // Initialize transporter if needed
     await this.initTransporter();
 
-    // Create a readable stream of the database file
-    const dbStream = fs.createReadStream(this.dbPath);
+    // Import archiver for compression
+    const archiverModule = await import('archiver');
+    const archiver = archiverModule.default;
     
     // Get current date for the filename
     const date = new Date().toISOString().split('T')[0];
+    const zipPath = path.join(path.dirname(this.dbPath), `inventory_backup_${date}.zip`);
     
-    // Send email with attachment
+    // Create ZIP file
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 9 } }); // Maximum compression
+    
+    archive.pipe(output);
+    archive.file(this.dbPath, { name: 'inventory.db' });
+    await archive.finalize();
+    
+    // Wait for ZIP creation to complete
+    await new Promise((resolve) => output.on('close', resolve));
+    
+    // Create a readable stream of the compressed file
+    const zipStream = fs.createReadStream(zipPath);
+    
+    // Send email with compressed attachment
     try {
       const info = await this.transporter.sendMail({
         from: process.env.EMAIL_FROM || 'fareedjaved203@gmail.com',
         to: email,
         subject: `Inventory Database Backup - ${date}`,
-        text: 'Please find attached your inventory database backup.',
+        text: 'Please find attached your compressed inventory database backup.',
         html: `
           <h2>Inventory Database Backup</h2>
-          <p>Please find attached your inventory database backup generated on ${new Date().toLocaleDateString()}.</p>
-          <p>This file contains all your inventory data and can be restored if needed.</p>
+          <p>Please find attached your compressed inventory database backup generated on ${new Date().toLocaleDateString()}.</p>
+          <p>This ZIP file contains all your inventory data and can be restored if needed.</p>
           <p><strong>Note:</strong> Keep this file secure as it contains all your business data.</p>
+          <p><strong>File:</strong> Compressed ZIP format for reduced size</p>
         `,
         attachments: [
           {
-            filename: `inventory_backup_${date}.db`,
-            content: dbStream
+            filename: `inventory_backup_${date}.zip`,
+            content: zipStream
           }
         ]
       });
 
-      console.log('Email sent successfully:', info.messageId);
+      // Clean up ZIP file after sending
+      fs.unlinkSync(zipPath);
+      
+      console.log('Compressed email backup sent successfully:', info.messageId);
 
       // For test accounts, log the preview URL
       const previewURL = nodemailer.getTestMessageUrl(info);
@@ -147,6 +167,10 @@ class EmailService {
 
       return info;
     } catch (error) {
+      // Clean up ZIP file on error
+      if (fs.existsSync(zipPath)) {
+        fs.unlinkSync(zipPath);
+      }
       console.error('Error sending email:', error);
       throw error;
     }

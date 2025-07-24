@@ -133,6 +133,13 @@ model LoanTransaction {
   updatedAt   DateTime @updatedAt
 }
 
+model DriveSettings {
+  id                String   @id @default(uuid())
+  serviceAccountKey String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 model ShopSettings {
   id              String   @id @default(uuid())
   email           String
