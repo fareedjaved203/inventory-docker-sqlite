@@ -177,6 +177,52 @@ class EmailService {
   }
 
   /**
+   * Send OTP for password reset
+   * @param {string} email - Recipient email address
+   * @param {string} otp - 6-digit OTP
+   * @returns {Promise<Object>} - Email sending result
+   */
+  async sendOTP(email, otp) {
+    if (!email || !otp) {
+      throw new Error('Email and OTP are required');
+    }
+
+    // Initialize transporter if needed
+    await this.initTransporter();
+    
+    try {
+      const info = await this.transporter.sendMail({
+        from: process.env.EMAIL_FROM || 'fareedjaved203@gmail.com',
+        to: email,
+        subject: 'Password Reset OTP - Inventory System',
+        text: `Your password reset OTP is: ${otp}. This OTP will expire in 10 minutes.`,
+        html: `
+          <h2>Password Reset Request</h2>
+          <p>You have requested to reset your password for the Inventory System.</p>
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+            <h1 style="color: #1f2937; font-size: 32px; letter-spacing: 4px; margin: 0;">${otp}</h1>
+          </div>
+          <p><strong>This OTP will expire in 10 minutes.</strong></p>
+          <p>If you did not request this password reset, please ignore this email.</p>
+        `
+      });
+
+      console.log('OTP email sent successfully:', info.messageId);
+
+      // For test accounts, log the preview URL
+      const previewURL = nodemailer.getTestMessageUrl(info);
+      if (previewURL) {
+        console.log('Preview URL: %s', previewURL);
+      }
+
+      return info;
+    } catch (error) {
+      console.error('Error sending OTP email:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Test the email configuration
    * @param {string} email - Test recipient email
    * @returns {Promise<Object>} - Test result
