@@ -142,9 +142,8 @@ model DriveSettings {
 
 model User {
   id        String   @id @default(uuid())
-  username  String   @unique
+  email     String   @unique
   password  String
-  email     String?
   resetOtp  String?
   otpExpiry DateTime?
   createdAt DateTime @default(now())

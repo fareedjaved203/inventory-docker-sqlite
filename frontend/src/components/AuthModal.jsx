@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 
-function AuthModal({ isSignup, onSuccess }) {
+function AuthModal({ isSignup, onSuccess, queryClient }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +23,11 @@ function AuthModal({ isSignup, onSuccess }) {
       const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login';
       const data = { email, password };
       await axios.post(`${import.meta.env.VITE_API_URL}${endpoint}`, data);
+      
+      // Invalidate auth check query to refetch user count
+      if (queryClient) {
+        queryClient.invalidateQueries(['auth-check']);
+      }
       
       onSuccess();
     } catch (err) {

@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Sidebar from './components/Sidebar';
@@ -16,6 +16,7 @@ import AuthModal from './components/AuthModal';
 const queryClient = new QueryClient();
 
 function AppContent() {
+  const queryClient = useQueryClient();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     // Clear auth on container restart by checking a session timestamp
     const authTime = localStorage.getItem('authTime');
@@ -55,6 +56,8 @@ function AppContent() {
     setShowAuthModal(false);
     localStorage.setItem('isAuthenticated', 'true');
     localStorage.setItem('authTime', Date.now().toString());
+    // Invalidate auth check to refetch user count
+    queryClient.invalidateQueries(['auth-check']);
   };
 
   const handleLogout = () => {
@@ -79,7 +82,8 @@ function AppContent() {
     return (
       <AuthModal 
         isSignup={!authCheck?.hasUser} 
-        onSuccess={handleAuthSuccess} 
+        onSuccess={handleAuthSuccess}
+        queryClient={queryClient}
       />
     );
   }

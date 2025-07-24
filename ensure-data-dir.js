@@ -1,9 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 
-// Ensure data directory exists
+// Ensure data directory exists with proper permissions
 const dataDir = '/app/prisma/data';
 if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true, mode: 0o777 });
   console.log('Created data directory:', dataDir);
+} else {
+  console.log('Data directory already exists:', dataDir);
+}
+
+// Ensure database file is writable if it exists
+const dbPath = path.join(dataDir, 'inventory.db');
+if (fs.existsSync(dbPath)) {
+  fs.chmodSync(dbPath, 0o666);
+  console.log('Set database file permissions');
 }

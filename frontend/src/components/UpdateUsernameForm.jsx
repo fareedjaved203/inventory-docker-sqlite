@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { FaUser, FaLock, FaEdit } from 'react-icons/fa';
 
-function UpdateUsernameForm() {
-  const [currentUsername, setCurrentUsername] = useState('');
-  const [newUsername, setNewUsername] = useState('');
+function UpdateEmailForm() {
+  const [currentEmail, setCurrentEmail] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -17,18 +17,18 @@ function UpdateUsernameForm() {
     setError('');
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/update-username`, {
-        currentUsername,
-        newUsername,
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/update-email`, {
+        currentEmail,
+        newEmail,
         password
       });
       
       setSuccess(true);
-      setCurrentUsername('');
-      setNewUsername('');
+      setCurrentEmail('');
+      setNewEmail('');
       setPassword('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update username');
+      setError(err.response?.data?.error || 'Failed to update email');
     } finally {
       setLoading(false);
     }
@@ -38,52 +38,40 @@ function UpdateUsernameForm() {
     <div className="bg-gradient-to-br from-primary-50 to-accent-50 p-6 rounded-lg shadow-lg border border-primary-100">
       <div className="flex items-center gap-3 mb-4">
         <FaEdit className="text-2xl text-primary-600" />
-        <h2 className="text-xl font-bold text-primary-800">Update Username</h2>
+        <h2 className="text-xl font-bold text-primary-800">Update Email</h2>
       </div>
       
       <p className="mb-4 text-gray-600">
-        Change your login username. You'll need to provide your current credentials.
+        Change your login email. You'll need to provide your current credentials.
       </p>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Current Username
+            Current Email
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaUser className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={currentUsername}
-              onChange={(e) => setCurrentUsername(e.target.value)}
-              required
-              minLength={3}
-              className="w-full pl-10 px-3 py-2 border border-primary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Enter current username"
-            />
-          </div>
+          <input
+            type="email"
+            value={currentEmail}
+            onChange={(e) => setCurrentEmail(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-primary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Enter current email"
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            New Username
+            New Email
           </label>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FaUser className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              required
-              minLength={3}
-              className="w-full pl-10 px-3 py-2 border border-primary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Enter new username"
-            />
-          </div>
+          <input
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            required
+            className="w-full px-3 py-2 border border-primary-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            placeholder="Enter new email"
+          />
         </div>
 
         <div>
@@ -115,14 +103,14 @@ function UpdateUsernameForm() {
               : 'bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700'
           }`}
         >
-          {loading ? 'Updating...' : 'Update Username'}
+          {loading ? 'Updating...' : 'Update Email'}
         </button>
       </form>
       
       {success && (
         <div className="mt-4 p-4 bg-green-50 border border-green-200 text-green-700 rounded-md">
-          <p className="font-medium">Username updated successfully!</p>
-          <p className="text-sm">Use your new username for future logins.</p>
+          <p className="font-medium">Email updated successfully!</p>
+          <p className="text-sm">Use your new email for future logins.</p>
         </div>
       )}
       
@@ -133,10 +121,10 @@ function UpdateUsernameForm() {
       )}
       
       <div className="mt-4 text-sm text-gray-500 bg-white bg-opacity-50 p-3 rounded-md border border-gray-100">
-        <p>Note: You'll need to use the new username for future logins. Make sure to remember it.</p>
+        <p>Note: You'll need to use the new email for future logins. Make sure to remember it.</p>
       </div>
     </div>
   );
 }
 
-export default UpdateUsernameForm;
+export default UpdateEmailForm;

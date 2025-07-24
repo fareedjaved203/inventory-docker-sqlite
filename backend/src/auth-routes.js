@@ -49,12 +49,13 @@ export function setupAuthRoutes(app, prisma) {
       }
 
       await prisma.user.create({
-        data: { username: email, password, email }
+        data: { email, password }
       });
 
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to create user' });
+      console.error('Signup error:', error);
+      res.status(500).json({ error: error.message || 'Failed to create user' });
     }
   });
 
@@ -73,7 +74,8 @@ export function setupAuthRoutes(app, prisma) {
 
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: 'Login failed' });
+      console.error('Login error:', error);
+      res.status(500).json({ error: error.message || 'Login failed' });
     }
   });
 
@@ -82,17 +84,12 @@ export function setupAuthRoutes(app, prisma) {
     try {
       const { email } = req.body;
       
-      const user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email },
-            { username: email } // Allow username as input too
-          ]
-        }
+      const user = await prisma.user.findUnique({
+        where: { email }
       });
 
       if (!user) {
-        return res.status(404).json({ error: 'No user found with this email/username' });
+        return res.status(404).json({ error: 'No user found with this email' });
       }
 
       // Generate 6-digit OTP
@@ -126,13 +123,8 @@ export function setupAuthRoutes(app, prisma) {
     try {
       const { email, otp, newPassword } = req.body;
       
-      const user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email },
-            { username: email } // Allow username as input too
-          ]
-        }
+      const user = await prisma.user.findUnique({
+        where: { email }
       });
 
       if (!user) {
@@ -185,7 +177,7 @@ export function setupAuthRoutes(app, prisma) {
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { email: newEmail, username: newEmail }
+        data: { email: newEmail }
       });
 
       res.json({ success: true, message: 'Email updated successfully' });

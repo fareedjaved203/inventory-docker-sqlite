@@ -1,6 +1,6 @@
 import React from 'react';
 import DatabaseBackupForm from '../components/DatabaseBackupForm';
-import UpdateUsernameForm from '../components/UpdateUsernameForm';
+import UpdateEmailForm from '../components/UpdateUsernameForm';
 import ShopSettingsForm from '../components/ShopSettingsForm';
 
 function Settings() {
@@ -11,7 +11,7 @@ function Settings() {
       <div className="space-y-6">
         <ShopSettingsForm />
         <DatabaseBackupForm />
-        <UpdateUsernameForm />
+        <UpdateEmailForm />
       </div>
     </div>
   );
