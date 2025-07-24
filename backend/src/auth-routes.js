@@ -2,14 +2,13 @@ import { validateRequest } from './middleware.js';
 import { z } from 'zod';
 
 const authSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
+  email: z.string().email('Invalid email address'),
   password: z.string().min(4, 'Password must be at least 4 characters'),
 });
 
 const signupSchema = z.object({
-  username: z.string().min(3, 'Username must be at least 3 characters'),
-  password: z.string().min(4, 'Password must be at least 4 characters'),
   email: z.string().email('Invalid email address'),
+  password: z.string().min(4, 'Password must be at least 4 characters'),
 });
 
 const forgotPasswordSchema = z.object({
@@ -22,9 +21,9 @@ const resetPasswordSchema = z.object({
   newPassword: z.string().min(4, 'Password must be at least 4 characters'),
 });
 
-const updateUsernameSchema = z.object({
-  currentUsername: z.string().min(3, 'Username must be at least 3 characters'),
-  newUsername: z.string().min(3, 'Username must be at least 3 characters'),
+const updateEmailSchema = z.object({
+  currentEmail: z.string().email('Invalid email address'),
+  newEmail: z.string().email('Invalid email address'),
   password: z.string().min(4, 'Password must be at least 4 characters'),
 });
 
@@ -42,7 +41,7 @@ export function setupAuthRoutes(app, prisma) {
   // Signup (only if no users exist)
   app.post('/api/auth/signup', validateRequest({ body: signupSchema }), async (req, res) => {
     try {
-      const { username, password, email } = req.body;
+      const { email, password } = req.body;
       
       const userCount = await prisma.user.count();
       if (userCount > 0) {
@@ -50,7 +49,7 @@ export function setupAuthRoutes(app, prisma) {
       }
 
       await prisma.user.create({
-        data: { username, password, email }
+        data: { username: email, password, email }
       });
 
       res.json({ success: true });
@@ -62,10 +61,10 @@ export function setupAuthRoutes(app, prisma) {
   // Login
   app.post('/api/auth/login', validateRequest({ body: authSchema }), async (req, res) => {
     try {
-      const { username, password } = req.body;
+      const { email, password } = req.body;
       
       const user = await prisma.user.findUnique({
-        where: { username }
+        where: { email }
       });
 
       if (!user || user.password !== password) {
@@ -163,13 +162,13 @@ export function setupAuthRoutes(app, prisma) {
     }
   });
 
-  // Update Username
-  app.post('/api/auth/update-username', validateRequest({ body: updateUsernameSchema }), async (req, res) => {
+  // Update Email
+  app.post('/api/auth/update-email', validateRequest({ body: updateEmailSchema }), async (req, res) => {
     try {
-      const { currentUsername, newUsername, password } = req.body;
+      const { currentEmail, newEmail, password } = req.body;
       
       const user = await prisma.user.findUnique({
-        where: { username: currentUsername }
+        where: { email: currentEmail }
       });
 
       if (!user || user.password !== password) {
@@ -177,21 +176,21 @@ export function setupAuthRoutes(app, prisma) {
       }
 
       const existingUser = await prisma.user.findUnique({
-        where: { username: newUsername }
+        where: { email: newEmail }
       });
 
       if (existingUser && existingUser.id !== user.id) {
-        return res.status(400).json({ error: 'Username already exists' });
+        return res.status(400).json({ error: 'Email already exists' });
       }
 
       await prisma.user.update({
         where: { id: user.id },
-        data: { username: newUsername }
+        data: { email: newEmail, username: newEmail }
       });
 
-      res.json({ success: true, message: 'Username updated successfully' });
+      res.json({ success: true, message: 'Email updated successfully' });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to update username' });
+      res.status(500).json({ error: 'Failed to update email' });
     }
   });
 }
