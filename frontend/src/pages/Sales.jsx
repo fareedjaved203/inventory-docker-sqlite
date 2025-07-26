@@ -244,7 +244,19 @@ function Sales() {
     },
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(["sales"]);
+        // Remove the deleted sale from cache
+        queryClient.setQueryData(
+          ['sales', selectedDate, debouncedSearchTerm, showPendingPayments, showCreditBalance, currentPage],
+          (oldData) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              items: oldData.items.filter(sale => sale.id !== saleToDelete.id),
+              total: oldData.total - 1
+            };
+          }
+        );
+        queryClient.invalidateQueries(["products"]); // Still need to refresh products for stock
         setDeleteError(null);
         setDeleteModalOpen(false);
         setSaleToDelete(null);

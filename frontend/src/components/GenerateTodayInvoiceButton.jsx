@@ -45,7 +45,7 @@ function GenerateTodayInvoiceButton({ sales }) {
     if (!loading) {
       fetchTodaySales();
     }
-  }, [today, loading]);
+  }, [today, loading, sales]);
 
   const handleGeneratePDF = async () => {
     if (!todaySales.length || !shopSettings) return;
