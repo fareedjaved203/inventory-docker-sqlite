@@ -364,35 +364,104 @@ export function setupSalesRoutes(app, prisma) {
   app.get('/api/sales', validateRequest({ query: querySchema }), async (req, res) => {
     try {
       const { page = 1, limit = 10, search = '' } = req.query;
+      let date = decodeURIComponent(req.query.date || '');
+      
+      // Force extract date from URL if not in query
+      if (!date && req.url.includes('date=')) {
+        const urlMatch = req.url.match(/date=([^&]+)/);
+        if (urlMatch) {
+          const extractedDate = decodeURIComponent(urlMatch[1]);
+          date = extractedDate;
+        }
+      }
 
       let where = {};
+      let conditions = [];
 
-      if (search) {
-        const parsedSearchDate = parseDateDDMMYYYY(search);
-        
-        if (parsedSearchDate instanceof Date && !isNaN(parsedSearchDate.getTime())) {
+      // Handle date filter (from date picker)
+      if (date && date.trim() !== '') {
+        const parsedDate = parseDateDDMMYYYY(date);
+        if (parsedDate instanceof Date && !isNaN(parsedDate.getTime())) {
           const startOfDay = new Date(Date.UTC(
-            parsedSearchDate.getUTCFullYear(),
-            parsedSearchDate.getUTCMonth(),
-            parsedSearchDate.getUTCDate(),
+            parsedDate.getUTCFullYear(),
+            parsedDate.getUTCMonth(),
+            parsedDate.getUTCDate(),
             0, 0, 0, 0
           ));
           
           const endOfDay = new Date(Date.UTC(
-            parsedSearchDate.getUTCFullYear(),
-            parsedSearchDate.getUTCMonth(),
-            parsedSearchDate.getUTCDate(),
+            parsedDate.getUTCFullYear(),
+            parsedDate.getUTCMonth(),
+            parsedDate.getUTCDate(),
             23, 59, 59, 999
           ));
 
-          where = {
+          conditions.push({
             saleDate: {
               gte: startOfDay,
               lt: new Date(endOfDay.getTime() + 1),
-            },
-          };
+            }
+          });
+          console.log('Added date condition for:', date);
+        }
+      }
+
+      // Handle search (bill number or contact name)
+      if (search && search.trim() !== '') {
+        console.log('Processing search parameter:', search);
+        // Check if search looks like a date (DD/MM/YYYY) - if so, treat as date filter
+        const datePattern = /^\d{1,2}\/\d{1,2}\/\d{4}$/;
+        const isDateFormat = datePattern.test(search);
+        
+        if (isDateFormat && (!date || date.trim() === '')) {
+          // Only use search as date if no separate date filter is provided
+          const parsedSearchDate = parseDateDDMMYYYY(search);
+          
+          if (parsedSearchDate instanceof Date && !isNaN(parsedSearchDate.getTime())) {
+            const startOfDay = new Date(Date.UTC(
+              parsedSearchDate.getUTCFullYear(),
+              parsedSearchDate.getUTCMonth(),
+              parsedSearchDate.getUTCDate(),
+              0, 0, 0, 0
+            ));
+            
+            const endOfDay = new Date(Date.UTC(
+              parsedSearchDate.getUTCFullYear(),
+              parsedSearchDate.getUTCMonth(),
+              parsedSearchDate.getUTCDate(),
+              23, 59, 59, 999
+            ));
+
+            conditions.push({
+              saleDate: {
+                gte: startOfDay,
+                lt: new Date(endOfDay.getTime() + 1),
+              }
+            });
+            console.log('Added search date condition for:', search);
+          } else {
+            // If date parsing failed, search by bill number and contact name
+            conditions.push({
+              OR: [
+                {
+                  billNumber: {
+                    contains: search
+                  }
+                },
+                {
+                  contact: {
+                    name: {
+                      contains: search
+                    }
+                  }
+                }
+              ]
+            });
+            console.log('Added bill/contact search for:', search);
+          }
         } else {
-          where = {
+          // Always search by bill number and contact name when not a date format or when date param exists
+          conditions.push({
             OR: [
               {
                 billNumber: {
@@ -407,8 +476,14 @@ export function setupSalesRoutes(app, prisma) {
                 }
               }
             ]
-          };
+          });
+          console.log('Added bill/contact search for:', search);
         }
+      }
+
+      // Combine all conditions with AND logic
+      if (conditions.length > 0) {
+        where = conditions.length === 1 ? conditions[0] : { AND: conditions };
       }
 
       const [total, salesData] = await Promise.all([

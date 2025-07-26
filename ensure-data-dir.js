@@ -13,6 +13,10 @@ if (!fs.existsSync(dataDir)) {
 // Ensure database file is writable if it exists
 const dbPath = path.join(dataDir, 'inventory.db');
 if (fs.existsSync(dbPath)) {
-  fs.chmodSync(dbPath, 0o666);
-  console.log('Set database file permissions');
+  try {
+    fs.chmodSync(dbPath, 0o666);
+    console.log('Set database file permissions');
+  } catch (error) {
+    console.log('Could not set database file permissions (this is usually fine):', error.message);
+  }
 }

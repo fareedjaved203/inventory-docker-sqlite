@@ -25,14 +25,27 @@ function GenerateTodayInvoiceButton({ sales }) {
   const pakistanTime = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Karachi"}));
   const today = pakistanTime.toISOString().split('T')[0];
   
-  const todaySales = sales?.items?.filter(sale => {
-    try {
-      const saleDate = new Date(sale.saleDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
-      return saleDate === today;
-    } catch (error) {
-      return false;
+  // Get all today's sales directly from API instead of relying on paginated data
+  const [todaySales, setTodaySales] = useState([]);
+  
+  useEffect(() => {
+    const fetchTodaySales = async () => {
+      try {
+        // Convert YYYY-MM-DD to DD/MM/YYYY format for API search
+        const [year, month, day] = today.split('-');
+        const searchDate = `${day}/${month}/${year}`;
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/sales?limit=1000&search=${searchDate}`);
+        setTodaySales(response.data.items || []);
+      } catch (error) {
+        console.error('Failed to fetch today\'s sales:', error);
+        setTodaySales([]);
+      }
+    };
+    
+    if (!loading) {
+      fetchTodaySales();
     }
-  }) || [];
+  }, [today, loading]);
 
   const handleGeneratePDF = async () => {
     if (!todaySales.length || !shopSettings) return;
