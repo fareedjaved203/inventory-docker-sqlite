@@ -511,14 +511,23 @@ function Sales() {
   const debouncedSearch = useCallback(
     debounce((term) => {
       setDebouncedSearchTerm(term);
-    }, 300),
+      setCurrentPage(1); // Reset to first page on search
+    }, 500),
     []
   );
 
   const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    debouncedSearch(e.target.value);
+    const value = e.target.value;
+    setSearchTerm(value);
+    debouncedSearch(value);
   };
+
+  // Clear debounced search when component unmounts
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [debouncedSearch]);
 
   const confirmDelete = () => {
     if (saleToDelete) {
