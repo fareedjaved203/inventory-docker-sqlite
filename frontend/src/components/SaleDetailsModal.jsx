@@ -167,7 +167,7 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
             )}
             <PDFDownloadLink
               document={<SaleInvoicePDF sale={sale} shopSettings={shopSettings} />}
-              fileName={`invoice-${sale.billNumber}.pdf`}
+              fileName={`invoice-${sale.contact?.name ? sale.contact.name.replace(/[^a-zA-Z0-9]/g, '_') : sale.billNumber}.pdf`}
               className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2 rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm flex items-center gap-2"
             >
               {({ loading }) => (loading ? 'Loading...' : (
