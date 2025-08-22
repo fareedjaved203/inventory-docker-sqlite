@@ -22,10 +22,6 @@ COPY backend/src ./src
 COPY backend/prisma ./prisma
 COPY backend/.env ./.env
 COPY init-db.js ./
-COPY migrate-vendor-to-contact.js ./
-COPY migrate-bigint.js ./
-COPY reset-db.js ./
-COPY remove-sku-constraint.js ./
 COPY add-returns-migration.js ./
 COPY add-original-amount.js ./
 COPY add-refund-fields.js ./

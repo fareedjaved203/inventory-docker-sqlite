@@ -457,7 +457,10 @@ function Contacts() {
               {/* Tabs */}
               <div className="flex space-x-1 mb-6">
                 <button
-                  onClick={() => setActiveTab('given')}
+                  onClick={() => {
+                    setActiveTab('given');
+                    setLoanType('GIVEN');
+                  }}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     activeTab === 'given'
                       ? 'bg-green-100 text-green-800 border border-green-200'
@@ -467,7 +470,10 @@ function Contacts() {
                   Loan Given
                 </button>
                 <button
-                  onClick={() => setActiveTab('taken')}
+                  onClick={() => {
+                    setActiveTab('taken');
+                    setLoanType('TAKEN');
+                  }}
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     activeTab === 'taken'
                       ? 'bg-blue-100 text-blue-800 border border-blue-200'
