@@ -1,0 +1,22 @@
+services:
+  inventory-app:
+    image: ghcr.io/fareedjaved203/inventory-docker-sqlite:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/prisma/data/inventory.db
+      - DB_PATH=/app/prisma/data/inventory.db
+      - PORT=3000
+    volumes:
+      - inventory_data:/app/prisma/data
+    restart: unless-stopped
+    user: "1001:1001"
+
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/products"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  inventory_data:

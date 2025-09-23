@@ -101,12 +101,14 @@ export function setupSalesRoutes(app, prisma) {
               discount: req.body.discount || 0,
               paidAmount: req.body.paidAmount || 0,
               saleDate,
+              ...(req.body.description && { description: req.body.description }),
               ...(req.body.contactId && { contact: { connect: { id: req.body.contactId } } }),
               items: {
                 create: req.body.items.map((item, index) => ({
                   quantity: item.quantity,
                   price: item.price,
                   purchasePrice: productDetails[index]?.purchasePrice || 0,
+                  orderIndex: index,
                   product: {
                     connect: { id: item.productId }
                   }
@@ -117,7 +119,8 @@ export function setupSalesRoutes(app, prisma) {
               items: {
                 include: {
                   product: true
-                }
+                },
+                orderBy: { orderIndex: 'asc' }
               },
               contact: true
             }
@@ -195,7 +198,10 @@ export function setupSalesRoutes(app, prisma) {
       
       // Apply search filter
       const filteredSales = search ? 
-        creditSales.filter(sale => sale.billNumber.includes(search)) : 
+        creditSales.filter(sale => 
+          sale.billNumber.includes(search) || 
+          (sale.description && sale.description.includes(search))
+        ) : 
         creditSales;
       
       // Apply pagination
@@ -258,7 +264,10 @@ export function setupSalesRoutes(app, prisma) {
       
       // Apply search filter
       const filteredSales = search ? 
-        pendingSales.filter(sale => sale.billNumber.includes(search)) : 
+        pendingSales.filter(sale => 
+          sale.billNumber.includes(search) || 
+          (sale.description && sale.description.includes(search))
+        ) : 
         pendingSales;
       
       // Apply pagination
@@ -449,6 +458,11 @@ export function setupSalesRoutes(app, prisma) {
                   }
                 },
                 {
+                  description: {
+                    contains: search
+                  }
+                },
+                {
                   contact: {
                     name: {
                       contains: search
@@ -465,6 +479,11 @@ export function setupSalesRoutes(app, prisma) {
             OR: [
               {
                 billNumber: {
+                  contains: search
+                }
+              },
+              {
+                description: {
                   contains: search
                 }
               },
@@ -498,6 +517,7 @@ export function setupSalesRoutes(app, prisma) {
               include: {
                 product: true,
               },
+              orderBy: { orderIndex: 'asc' }
             },
             contact: true,
             returns: {
@@ -563,6 +583,7 @@ export function setupSalesRoutes(app, prisma) {
             include: {
               product: true,
             },
+            orderBy: { orderIndex: 'asc' }
           },
           contact: true,
           returns: {
@@ -667,12 +688,14 @@ export function setupSalesRoutes(app, prisma) {
               discount: req.body.discount || 0,
               paidAmount: req.body.paidAmount || 0,
               ...(saleDate && { saleDate }),
+              ...(req.body.description !== undefined && { description: req.body.description }),
               ...(req.body.contactId ? { contact: { connect: { id: req.body.contactId } } } : { contact: { disconnect: true } }),
               items: {
                 create: req.body.items.map((item, index) => ({
                   quantity: item.quantity,
                   price: item.price,
                   purchasePrice: productDetails[index]?.purchasePrice || 0,
+                  orderIndex: index,
                   product: {
                     connect: { id: item.productId }
                   }
@@ -683,7 +706,8 @@ export function setupSalesRoutes(app, prisma) {
               items: {
                 include: {
                   product: true
-                }
+                },
+                orderBy: { orderIndex: 'asc' }
               },
               contact: true
             }

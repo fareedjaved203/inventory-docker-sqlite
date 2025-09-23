@@ -23,6 +23,7 @@ const saleSchema = z.object({
   totalAmount: z.number().min(0, "Total amount cannot be negative"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative"),
   saleDate: z.string().optional(),
+  description: z.string().optional(),
 });
 
 function Sales() {
@@ -65,6 +66,7 @@ function Sales() {
   const [contactSearchTerm, setContactSearchTerm] = useState("");
   const [debouncedContactSearchTerm, setDebouncedContactSearchTerm] =
     useState("");
+  const [description, setDescription] = useState("");
 
   const updateSale = useMutation(
     async (updatedSale) => {
@@ -95,6 +97,7 @@ function Sales() {
         setQuantity("");
         setSelectedContact(null);
         setSaleDate("");
+        setDescription("");
         setIsEditMode(false);
         setEditingSale(null);
       },
@@ -228,6 +231,7 @@ function Sales() {
         setQuantity("");
         setSelectedContact(null);
         setSaleDate("");
+        setDescription("");
         setTempStockUpdates({});
       },
     }
@@ -436,6 +440,7 @@ function Sales() {
     setPaidAmount(sale.paidAmount || 0);
     setSelectedContact(sale.contact || null);
     setSaleDate(new Date(sale.saleDate).toISOString().split("T")[0]);
+    setDescription(sale.description || "");
     setIsEditMode(true);
     setIsModalOpen(true);
   };
@@ -481,6 +486,7 @@ function Sales() {
       paidAmount: parsedPaidAmount,
       ...(selectedContact && { contactId: selectedContact.id }),
       ...(saleDate && { saleDate }),
+      ...(description && { description }),
     };
 
     try {
@@ -574,7 +580,7 @@ function Sales() {
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="Search bill number..."
+              placeholder="Search bill number or description..."
               value={searchTerm}
               onChange={handleSearchChange}
               className="w-full sm:w-48 md:w-64 pl-10 pr-3 py-2 text-sm border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -632,6 +638,7 @@ function Sales() {
               onClick={() => {
                 setDiscount(0);
                 setPaidAmount("");
+                setDescription("");
                 setIsModalOpen(true);
               }}
               className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 text-sm rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm whitespace-nowrap"
@@ -1202,6 +1209,20 @@ function Sales() {
                   )}
                 </div>
 
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Add a description for this sale..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  />
+                </div>
+
                 {/* Subtotal and Discount */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1305,6 +1326,7 @@ function Sales() {
                   setPaidAmount("");
                   setSelectedContact(null);
                   setSaleDate("");
+                  setDescription("");
                   setValidationErrors({});
                   setTempStockUpdates({});
                 }}
