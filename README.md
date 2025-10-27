@@ -4,12 +4,13 @@ A complete inventory management system with SQLite database, containerized in a 
 
 ## Features
 
-- Product management
-- Sales tracking
+- Product management with decimal price support
+- Sales tracking with decimal amounts
 - Vendor management
 - Bulk purchasing
 - Dashboard with analytics
 - Single container deployment
+- Automatic database migration for decimal support
 
 ## Running the Application
 

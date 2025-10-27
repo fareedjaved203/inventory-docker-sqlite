@@ -149,6 +149,14 @@ export function setupSalesRoutes(app, prisma) {
             });
           }
 
+          // Update contact remainingAmount if provided
+          if (req.body.contactId && req.body.contactRemainingAmount !== undefined) {
+            await prisma.contact.update({
+              where: { id: req.body.contactId },
+              data: { remainingAmount: req.body.contactRemainingAmount }
+            });
+          }
+
           return sale;
         });
 
@@ -237,6 +245,44 @@ export function setupSalesRoutes(app, prisma) {
       });
     } catch (error) {
       console.error('Error fetching credit balance sales:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get total credit balance for a specific contact
+  app.get('/api/sales/contact-credit/:contactId', async (req, res) => {
+    try {
+      const { contactId } = req.params;
+      
+      // Get all sales for this contact
+      const contactSales = await prisma.sale.findMany({
+        where: {
+          contactId: contactId
+        },
+        include: {
+          returns: true
+        }
+      });
+      
+      let totalCredit = 0;
+      
+      // Calculate total credit from all sales
+      contactSales.forEach(sale => {
+        const originalAmount = Number(sale.totalAmount);
+        const returnedAmount = (sale.returns || []).reduce((sum, ret) => sum + Number(ret.totalAmount), 0);
+        const totalRefunded = (sale.returns || []).reduce((sum, ret) => sum + (ret.refundPaid ? Number(ret.refundAmount || 0) : 0), 0);
+        const netAmount = originalAmount - returnedAmount;
+        const balance = netAmount - Number(sale.paidAmount) + totalRefunded;
+        
+        // Only add if there's a pending balance (positive balance means money is owed)
+        if (balance > 0) {
+          totalCredit += balance;
+        }
+      });
+      
+      res.json({ totalCredit });
+    } catch (error) {
+      console.error('Error fetching contact credit:', error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -733,6 +779,14 @@ export function setupSalesRoutes(app, prisma) {
                   decrement: item.quantity
                 }
               }
+            });
+          }
+
+          // Update contact remainingAmount if provided
+          if (req.body.contactId && req.body.contactRemainingAmount !== undefined) {
+            await prisma.contact.update({
+              where: { id: req.body.contactId },
+              data: { remainingAmount: req.body.contactRemainingAmount }
             });
           }
 

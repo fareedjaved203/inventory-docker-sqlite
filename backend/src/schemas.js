@@ -23,6 +23,7 @@ export const saleSchema = z.object({
   totalAmount: z.number().min(0, "Total amount cannot be negative").max(100000000, "Total amount cannot exceed Rs.10 Crores"),
   paidAmount: z.number().min(0, "Paid amount cannot be negative").max(100000000, "Paid amount cannot exceed Rs.10 Crores"),
   contactId: z.string().optional(),
+  contactRemainingAmount: z.number().min(0, "Remaining amount cannot be negative").max(100000000, "Remaining amount cannot exceed Rs.10 Crores").optional(),
   billNumber: z.string().optional(), // Optional because it will be auto-generated
   saleDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").optional(),
   description: z.string().optional(),

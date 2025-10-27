@@ -53,6 +53,7 @@ function Sales() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [discount, setDiscount] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
+  const [remainingAmount, setRemainingAmount] = useState('');
   const [selectedContact, setSelectedContact] = useState(null);
   const [saleDate, setSaleDate] = useState("");
   const [showPendingPayments, setShowPendingPayments] = useState(
@@ -98,6 +99,7 @@ function Sales() {
         setSelectedContact(null);
         setSaleDate("");
         setDescription("");
+        setRemainingAmount('');
         setIsEditMode(false);
         setEditingSale(null);
       },
@@ -232,6 +234,7 @@ function Sales() {
         setSelectedContact(null);
         setSaleDate("");
         setDescription("");
+        setRemainingAmount('');
         setTempStockUpdates({});
       },
     }
@@ -372,13 +375,17 @@ function Sales() {
 
   const handlePriceChange = (index, newPrice) => {
     const updatedItems = [...saleItems];
-    const price = parseFloat(newPrice) || 0;
-    updatedItems[index] = {
-      ...updatedItems[index],
-      price: price,
-      subtotal: price * updatedItems[index].quantity,
-    };
-    setSaleItems(updatedItems);
+    // Allow empty string or valid decimal numbers
+    const price = newPrice === '' ? 0 : parseFloat(newPrice);
+    // Only update if it's a valid number or empty string
+    if (!isNaN(price) || newPrice === '') {
+      updatedItems[index] = {
+        ...updatedItems[index],
+        price: price,
+        subtotal: price * updatedItems[index].quantity,
+      };
+      setSaleItems(updatedItems);
+    }
   };
 
   const handleRemoveItem = (index) => {
@@ -441,6 +448,7 @@ function Sales() {
     setSelectedContact(sale.contact || null);
     setSaleDate(new Date(sale.saleDate).toISOString().split("T")[0]);
     setDescription(sale.description || "");
+    setRemainingAmount(sale.contact?.remainingAmount || '');
     setIsEditMode(true);
     setIsModalOpen(true);
   };
@@ -485,6 +493,7 @@ function Sales() {
       discount: parseFloat(discount) || 0,
       paidAmount: parsedPaidAmount,
       ...(selectedContact && { contactId: selectedContact.id }),
+      ...(remainingAmount && selectedContact && { contactRemainingAmount: parseFloat(remainingAmount) }),
       ...(saleDate && { saleDate }),
       ...(description && { description }),
     };
@@ -1114,10 +1123,11 @@ function Sales() {
                               type="number"
                               step="0.01"
                               min="0"
-                              value={item.price}
+                              value={item.price === 0 ? '' : item.price}
                               onChange={(e) =>
                                 handlePriceChange(index, e.target.value)
                               }
+                              placeholder="0.00"
                               className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary-500"
                             />
                           </div>
@@ -1188,6 +1198,7 @@ function Sales() {
                               onClick={() => {
                                 setSelectedContact(contact);
                                 setContactSearchTerm(contact.name);
+                                setRemainingAmount(contact.remainingAmount || '');
                               }}
                               className="px-4 py-2 cursor-pointer hover:bg-primary-50"
                             >
@@ -1258,7 +1269,7 @@ function Sales() {
                   </div>
                 </div>
 
-                {/* Total and Paid Amount */}
+                {/* Total, Paid Amount, and Remaining Amount */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1304,6 +1315,27 @@ function Sales() {
                   </div>
                 </div>
 
+                {/* Remaining Amount - Only show when contact is selected */}
+                {selectedContact && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Outstanding Balance
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={remainingAmount}
+                      onChange={(e) => setRemainingAmount(e.target.value)}
+                      placeholder={`Current: Rs.${(selectedContact.remainingAmount || 0).toFixed(2)}`}
+                      className="w-full px-3 py-2 border border-primary-200 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Update outstanding balance for {selectedContact.name}
+                    </p>
+                  </div>
+                )}
+
                 {/* Total validation error */}
                 {validationErrors.total && (
                   <div className="bg-red-50 border border-red-200 rounded-md p-3">
@@ -1327,6 +1359,7 @@ function Sales() {
                   setSelectedContact(null);
                   setSaleDate("");
                   setDescription("");
+                  setRemainingAmount('');
                   setValidationErrors({});
                   setTempStockUpdates({});
                 }}
