@@ -8,7 +8,7 @@ const urduTextToImage = async (text, fontSize = 12, targetWidth = 300) => {
   const scale = 4; // 4x resolution for crisp text
   
   canvas.width = targetWidth * scale;
-  canvas.height = (fontSize + 10) * scale;
+  canvas.height = (fontSize * 2 + 20) * scale;
   
   // Scale context for high DPI
   ctx.scale(scale, scale);
@@ -21,7 +21,13 @@ const urduTextToImage = async (text, fontSize = 12, targetWidth = 300) => {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   
-  ctx.fillText(text, targetWidth / 2, (canvas.height / scale) / 2);
+  const lines = text.split('\n');
+  const lineHeight = fontSize + 4;
+  const startY = (canvas.height / scale - (lines.length - 1) * lineHeight) / 2;
+  
+  lines.forEach((line, index) => {
+    ctx.fillText(line, targetWidth / 2, startY + index * lineHeight);
+  });
   
   return canvas.toDataURL('image/png');
 };
@@ -170,26 +176,26 @@ const styles = StyleSheet.create({
   },
   col1: {
     flex: 2.5,
-    fontSize: 5,
+    fontSize: 9,
     color: '#000000',
     fontWeight: 'normal',
   },
   col2: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 5,
+    fontSize: 9,
     color: '#000000',
   },
   col3: {
     flex: 1.2,
     textAlign: 'right',
-    fontSize: 5,
+    fontSize: 9,
     color: '#000000',
   },
   col4: {
     flex: 1.3,
     textAlign: 'right',
-    fontSize: 5,
+    fontSize: 9,
     color: '#000000',
     fontWeight: 'bold',
   },
@@ -203,7 +209,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     marginRight: 8,
     fontWeight: 'bold',
-    fontSize: 5,
+    fontSize: 9,
     color: '#000000',
   },
   footer: {
@@ -252,7 +258,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
   useEffect(() => {
     const generateUrduImage = async () => {
       try {
-        const imageData = await urduTextToImage('استعمال کے بعد سامان واپس یا تبدیل نہیں ہوگا۔', 12, 300);
+        const imageData = await urduTextToImage('استعمال کے بعد سامان واپس یا تبدیل نہیں ہوگا۔\nالیکٹرک سامان کی کوئی گارنٹی نہیں ہے۔', 20, 400);
         setUrduImage(imageData);
       } catch (error) {
         console.error('Error generating Urdu image:', error);
@@ -260,8 +266,6 @@ function SaleInvoicePDF({ sale, shopSettings }) {
     };
     generateUrduImage();
   }, []);
-
-  console.log(shopSettings)
 
   // Create brand array with registered trademark symbols
   const brands = [];
@@ -378,10 +382,10 @@ function SaleInvoicePDF({ sale, shopSettings }) {
 
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.col1, { color: '#000000', fontWeight: 'bold', fontSize: 6 }]}>ITEM</Text>
-            <Text style={[styles.col2, { color: '#000000', fontWeight: 'bold', fontSize: 6 }]}>QTY</Text>
-            <Text style={[styles.col3, { color: '#000000', fontWeight: 'bold', fontSize: 6 }]}>RATE</Text>
-            <Text style={[styles.col4, { color: '#000000', fontWeight: 'bold', fontSize: 6 }]}>AMOUNT</Text>
+            <Text style={[styles.col1, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>ITEM</Text>
+            <Text style={[styles.col2, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>QTY</Text>
+            <Text style={[styles.col3, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>RATE</Text>
+            <Text style={[styles.col4, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>AMOUNT</Text>
           </View>
 
           {sale.items.map((item, index) => (
@@ -434,7 +438,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           <>
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Subtotal:</Text>
-            <Text style={{ fontSize: 5 }}>
+            <Text style={{ fontSize: 9 }}>
               {formatPakistaniCurrencyPDF(
                 sale.totalAmount + (sale.discount || 0)
               )}
@@ -442,21 +446,21 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           </View>
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Discount:</Text>
-            <Text style={{ fontSize: 5 }}>-{formatPakistaniCurrencyPDF(sale.discount || 0)}</Text>
+            <Text style={{ fontSize: 9 }}>-{formatPakistaniCurrencyPDF(sale.discount || 0)}</Text>
           </View>
           </>
         )}
 
         <View style={styles.total}>
           <Text style={styles.totalLabel}>Total:</Text>
-          <Text style={{ fontSize: 5 }}>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
+          <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
         </View>
 
         {sale.returns && sale.returns.length > 0 && (
           <View>
             <View style={styles.total}>
               <Text style={styles.totalLabel}>Total Returned:</Text>
-              <Text style={{ fontSize: 7 }}>
+              <Text style={{ fontSize: 9 }}>
                 {formatPakistaniCurrencyPDF(
                   sale.returns.reduce((sum, ret) => sum + ret.totalAmount, 0)
                 )}
@@ -465,28 +469,28 @@ function SaleInvoicePDF({ sale, shopSettings }) {
             {totalRefunded > 0 && (
               <View style={styles.total}>
                 <Text style={styles.totalLabel}>Total Refunded:</Text>
-                <Text style={{ fontSize: 7 }}>{formatPakistaniCurrencyPDF(totalRefunded)}</Text>
+                <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(totalRefunded)}</Text>
               </View>
             )}
             <View style={styles.total}>
               <Text style={styles.totalLabel}>Net Total After Returns:</Text>
-              <Text style={{ fontSize: 7 }}>{formatPakistaniCurrencyPDF(netAmount > 0 ? netAmount : 0)}</Text>
+              <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(netAmount > 0 ? netAmount : 0)}</Text>
             </View>
             {(() => {
               return balance > 0 ? (
                 <View style={styles.total}>
                   <Text style={styles.totalLabel}>Net Balance Due:</Text>
-                  <Text style={{ fontSize: 7 }}>{formatPakistaniCurrencyPDF(balance)}</Text>
+                  <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(balance)}</Text>
                 </View>
               ) : balance < 0 ? (
                 <View style={styles.total}>
                   <Text style={styles.totalLabel}>Credit Balance:</Text>
-                  <Text style={{ fontSize: 7 }}>{formatPakistaniCurrencyPDF(Math.abs(balance) <= sale.paidAmount ? Math.abs(balance) : 0)}</Text>
+                  <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(Math.abs(balance) <= sale.paidAmount ? Math.abs(balance) : 0)}</Text>
                 </View>
               ) : (
                 <View style={styles.total}>
                   <Text style={styles.totalLabel}>Status:</Text>
-                  <Text style={{ fontSize: 7 }}>Fully Paid</Text>
+                  <Text style={{ fontSize: 9 }}>Fully Paid</Text>
                 </View>
               );
             })()}
@@ -499,7 +503,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
         {sale.contact && (sale.contact.remainingAmount || 0) > 0 && (
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Previous Remaining Amount:</Text>
-            <Text style={{ fontSize: 7 }}>
+            <Text style={{ fontSize: 9 }}>
               Rs.{formatPakistaniCurrencyPDF(sale.contact.remainingAmount || 0, false)}
             </Text>
           </View>
@@ -509,7 +513,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
         {sale.contact && (sale.contact.remainingAmount || 0) > 0 && (
           <View style={[styles.total, { borderTop: '1px solid #000', paddingTop: 8, marginTop: 8 }]}>
             <Text style={[styles.totalLabel, { fontWeight: 'bold' }]}>Overall Total:</Text>
-            <Text style={{ fontWeight: 'bold', fontSize: 7 }}>
+            <Text style={{ fontWeight: 'bold', fontSize: 9 }}>
               Rs.{formatPakistaniCurrencyPDF((sale.totalAmount || 0) + (sale.contact.remainingAmount || 0), false)}
             </Text>
           </View>
@@ -521,7 +525,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
               {urduImage && (
                 <Image 
                   src={urduImage} 
-                  style={{ width: '100%', height: 12, marginBottom: 2 }}
+                  style={{ width: '100%', height: 20, marginBottom: 2 }}
                 />
               )}
               <Text style={[styles.contactInfo, { textAlign: 'center', fontWeight: 'bold' }]}>
