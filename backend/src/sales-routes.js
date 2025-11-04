@@ -113,10 +113,28 @@ export function setupSalesRoutes(app, prisma) {
                     connect: { id: item.productId }
                   }
                 }))
-              }
+              },
+              ...(req.body.exchangeItems && req.body.exchangeItems.length > 0 && {
+                exchangeItems: {
+                  create: req.body.exchangeItems.map((item, index) => ({
+                    quantity: item.quantity,
+                    price: item.price,
+                    orderIndex: index,
+                    product: {
+                      connect: { id: item.productId }
+                    }
+                  }))
+                }
+              })
             },
             include: {
               items: {
+                include: {
+                  product: true
+                },
+                orderBy: { orderIndex: 'asc' }
+              },
+              exchangeItems: {
                 include: {
                   product: true
                 },
@@ -186,6 +204,11 @@ export function setupSalesRoutes(app, prisma) {
             }
           },
           items: {
+            include: {
+              product: true,
+            },
+          },
+          exchangeItems: {
             include: {
               product: true,
             },
@@ -357,6 +380,11 @@ export function setupSalesRoutes(app, prisma) {
         },
         include: {
           items: {
+            include: {
+              product: true,
+            },
+          },
+          exchangeItems: {
             include: {
               product: true,
             },
@@ -565,6 +593,12 @@ export function setupSalesRoutes(app, prisma) {
               },
               orderBy: { orderIndex: 'asc' }
             },
+            exchangeItems: {
+              include: {
+                product: true,
+              },
+              orderBy: { orderIndex: 'asc' }
+            },
             contact: true,
             returns: {
               include: {
@@ -626,6 +660,12 @@ export function setupSalesRoutes(app, prisma) {
         where: { id: req.params.id },
         include: {
           items: {
+            include: {
+              product: true,
+            },
+            orderBy: { orderIndex: 'asc' }
+          },
+          exchangeItems: {
             include: {
               product: true,
             },
@@ -713,6 +753,10 @@ export function setupSalesRoutes(app, prisma) {
             where: { saleId: req.params.id }
           });
 
+          await prisma.exchangeItem.deleteMany({
+            where: { saleId: req.params.id }
+          });
+
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : undefined;
           console.log("to update sale: ",req.body)
           
@@ -746,10 +790,28 @@ export function setupSalesRoutes(app, prisma) {
                     connect: { id: item.productId }
                   }
                 }))
-              }
+              },
+              ...(req.body.exchangeItems && req.body.exchangeItems.length > 0 && {
+                exchangeItems: {
+                  create: req.body.exchangeItems.map((item, index) => ({
+                    quantity: item.quantity,
+                    price: item.price,
+                    orderIndex: index,
+                    product: {
+                      connect: { id: item.productId }
+                    }
+                  }))
+                }
+              })
             },
             include: {
               items: {
+                include: {
+                  product: true
+                },
+                orderBy: { orderIndex: 'asc' }
+              },
+              exchangeItems: {
                 include: {
                   product: true
                 },
@@ -868,6 +930,11 @@ export function setupSalesRoutes(app, prisma) {
 
         // Delete sale items
         await prisma.saleItem.deleteMany({
+          where: { saleId: req.params.id }
+        });
+
+        // Delete exchange items
+        await prisma.exchangeItem.deleteMany({
           where: { saleId: req.params.id }
         });
 

@@ -26,6 +26,7 @@ COPY ensure-data-dir.js ./
 COPY add-description-to-sales.js ./
 COPY migrate-to-decimal.js ./
 COPY add-remaining-amount.js ./
+COPY add-exchange-items.js ./
 
 # Copy built frontend
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
@@ -48,4 +49,4 @@ USER nodejs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node ensure-data-dir.js && echo 'Initializing database...' && node init-db.js && echo 'Adding description field to sales...' && node add-description-to-sales.js && echo 'Migrating to decimal support...' && node migrate-to-decimal.js && echo 'Adding remaining amount to contacts...' && node add-remaining-amount.js && echo 'Regenerating Prisma client...' && npx prisma generate && echo 'Starting application...' && node src/index.js"]
+CMD ["sh", "-c", "node ensure-data-dir.js && echo 'Initializing database...' && node init-db.js && echo 'Adding exchange items support...' && node add-exchange-items.js && echo 'Regenerating Prisma client...' && npx prisma generate && echo 'Starting application...' && node src/index.js"]

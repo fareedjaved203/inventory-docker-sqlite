@@ -72,10 +72,12 @@ function formatPakistaniCurrencyPDF(amount, showCurrency = true) {
 const styles = StyleSheet.create({
   page: {
     padding: 8,
-    paddingBottom: 8,
     fontSize: 6,
     backgroundColor: '#ffffff',
     fontFamily: 'Helvetica',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    minHeight: '100vh',
   },
   header: {
     marginBottom: 3,
@@ -212,11 +214,11 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#000000',
   },
+  content: {
+    flex: 1,
+  },
   footer: {
-    position: 'absolute',
-    bottom: 15,
-    left: 15,
-    right: 15,
+    marginTop: 'auto',
     fontSize: 5,
     color: '#000000',
     borderTop: '2px solid #000000',
@@ -251,6 +253,48 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
 });
+
+// Header component to be repeated on each page
+const InvoiceHeader = ({ shopSettings, brands }) => (
+  <View style={styles.header} fixed>
+    <View style={styles.shopNameContainer}>
+      <Text style={styles.shopName}>
+        {shopSettings?.shopName || "INVOICE"}
+      </Text>
+    </View>
+    <View style={styles.compactInfo}>
+      <View style={styles.leftSection}>
+        {brands.length > 0 && (
+          <Text style={styles.brands}>{brands.join(" • ")}</Text>
+        )}
+        {shopSettings?.shopDescription && (
+          <Text style={styles.subtitle}>{shopSettings.shopDescription}</Text>
+        )}
+        {shopSettings?.shopDescription2 && (
+          <Text style={styles.subtitle}>{shopSettings.shopDescription2}</Text>
+        )}
+      </View>
+      <View style={styles.rightSection}>
+        {shopSettings?.userName1 && (
+          <Text style={styles.contactInfo}>
+            {shopSettings.userName1}: {shopSettings.userPhone1}
+          </Text>
+        )}
+        {shopSettings?.userName2 && (
+          <Text style={styles.contactInfo}>
+            {shopSettings.userName2}: {shopSettings.userPhone2}
+          </Text>
+        )}
+        {shopSettings?.userName3 && (
+          <Text style={styles.contactInfo}>
+            {shopSettings.userName3}: {shopSettings.userPhone3}
+          </Text>
+        )}
+      </View>
+    </View>
+    <Text style={styles.title}>SALES INVOICE</Text>
+  </View>
+);
 
 function SaleInvoicePDF({ sale, shopSettings }) {
   const [urduImage, setUrduImage] = useState(null);
@@ -310,46 +354,8 @@ function SaleInvoicePDF({ sale, shopSettings }) {
   return (
     <Document>
       <Page size="A5" style={styles.page} wrap>
-        <View style={styles.header}>
-          <View style={styles.shopNameContainer}>
-            <Text style={styles.shopName}>
-              {shopSettings?.shopName || "INVOICE"}
-            </Text>
-          </View>
-
-          <View style={styles.compactInfo}>
-            <View style={styles.leftSection}>
-              {brands.length > 0 && (
-                <Text style={styles.brands}>{brands.join(" • ")}</Text>
-              )}
-              {shopSettings?.shopDescription && (
-                <Text style={styles.subtitle}>{shopSettings.shopDescription}</Text>
-              )}
-              {shopSettings?.shopDescription2 && (
-                <Text style={styles.subtitle}>{shopSettings.shopDescription2}</Text>
-              )}
-            </View>
-            <View style={styles.rightSection}>
-              {shopSettings?.userName1 && (
-                <Text style={styles.contactInfo}>
-                  {shopSettings.userName1}: {shopSettings.userPhone1}
-                </Text>
-              )}
-              {shopSettings?.userName2 && (
-                <Text style={styles.contactInfo}>
-                  {shopSettings.userName2}: {shopSettings.userPhone2}
-                </Text>
-              )}
-              {shopSettings?.userName3 && (
-                <Text style={styles.contactInfo}>
-                  {shopSettings.userName3}: {shopSettings.userPhone3}
-                </Text>
-              )}
-            </View>
-          </View>
-
-          <Text style={styles.title}>SALES INVOICE</Text>
-        </View>
+        <InvoiceHeader shopSettings={shopSettings} brands={brands} />
+        <View style={styles.content}>
 
         <View style={styles.info}>
           <View style={styles.infoRow}>
@@ -401,6 +407,30 @@ function SaleInvoicePDF({ sale, shopSettings }) {
             </View>
           ))}
         </View>
+
+        {/* Exchange Items Section */}
+        {sale.exchangeItems && sale.exchangeItems.length > 0 && (
+          <View style={[styles.table, { marginTop: 4 }]}>
+            <View style={[styles.tableHeader, { backgroundColor: '#fff2e6' }]}>
+              <Text style={[styles.col1, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>EXCHANGE ITEM</Text>
+              <Text style={[styles.col2, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>QTY</Text>
+              <Text style={[styles.col3, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>RATE</Text>
+              <Text style={[styles.col4, { color: '#000000', fontWeight: 'bold', fontSize: 10 }]}>AMOUNT</Text>
+            </View>
+            {sale.exchangeItems.map((item, index) => (
+              <View key={index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <Text style={styles.col1}>{item.product.name}</Text>
+                <Text style={styles.col2}>{item.quantity}</Text>
+                <Text style={styles.col3}>
+                  Rs.{formatPakistaniCurrencyPDF(item.price, false)}
+                </Text>
+                <Text style={styles.col4}>
+                  Rs.{formatPakistaniCurrencyPDF(item.price * item.quantity, false)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Returns Section */}
         {sale.returns && sale.returns.length > 0 && (
@@ -519,7 +549,8 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           </View>
         )}
 
-        <View style={styles.footer} fixed>
+        </View>
+        <View style={styles.footer}>
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 4 }}>
             <View style={{ border: '2px solid #000000', padding: 6, backgroundColor: '#ffffff' }}>
               {urduImage && (

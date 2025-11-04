@@ -68,6 +68,11 @@ function Sales() {
   const [debouncedContactSearchTerm, setDebouncedContactSearchTerm] =
     useState("");
   const [description, setDescription] = useState("");
+  const [exchangeItems, setExchangeItems] = useState([]);
+  const [exchangeProductSearchTerm, setExchangeProductSearchTerm] = useState("");
+  const [selectedExchangeProduct, setSelectedExchangeProduct] = useState(null);
+  const [exchangeQuantity, setExchangeQuantity] = useState("");
+  const [exchangeProductSelected, setExchangeProductSelected] = useState(false);
 
   const updateSale = useMutation(
     async (updatedSale) => {
@@ -100,6 +105,11 @@ function Sales() {
         setSaleDate("");
         setDescription("");
         setRemainingAmount('');
+        setExchangeItems([]);
+        setExchangeProductSearchTerm("");
+        setSelectedExchangeProduct(null);
+        setExchangeQuantity("");
+        setExchangeProductSelected(false);
         setIsEditMode(false);
         setEditingSale(null);
       },
@@ -235,6 +245,11 @@ function Sales() {
         setSaleDate("");
         setDescription("");
         setRemainingAmount('');
+        setExchangeItems([]);
+        setExchangeProductSearchTerm("");
+        setSelectedExchangeProduct(null);
+        setExchangeQuantity("");
+        setExchangeProductSelected(false);
         setTempStockUpdates({});
       },
     }
@@ -408,6 +423,78 @@ function Sales() {
     });
   };
 
+  const handleAddExchangeItem = () => {
+    if (!selectedExchangeProduct || !exchangeQuantity) {
+      setValidationErrors({
+        ...validationErrors,
+        exchangeProduct: !selectedExchangeProduct
+          ? "Please select a product from the dropdown"
+          : undefined,
+        exchangeQuantity: !exchangeQuantity ? "Please enter a quantity" : undefined,
+      });
+      return;
+    }
+
+    if (exchangeProductSearchTerm && !selectedExchangeProduct) {
+      setValidationErrors({
+        ...validationErrors,
+        exchangeProduct: "Please select a valid product from the dropdown",
+      });
+      return;
+    }
+
+    const quantityNum = parseInt(exchangeQuantity);
+
+    const existingItemIndex = exchangeItems.findIndex(
+      (item) => item.productId === selectedExchangeProduct.id
+    );
+
+    if (existingItemIndex >= 0) {
+      const updatedItems = [...exchangeItems];
+      const existingItem = updatedItems[existingItemIndex];
+      const newQuantity = existingItem.quantity + quantityNum;
+
+      updatedItems[existingItemIndex] = {
+        ...existingItem,
+        quantity: newQuantity,
+        subtotal: existingItem.price * newQuantity,
+      };
+      setExchangeItems(updatedItems);
+    } else {
+      const newItem = {
+        productId: selectedExchangeProduct.id,
+        productName: selectedExchangeProduct.name,
+        quantity: quantityNum,
+        price: selectedExchangeProduct.price,
+        subtotal: selectedExchangeProduct.price * quantityNum,
+      };
+      setExchangeItems([...exchangeItems, newItem]);
+    }
+
+    setSelectedExchangeProduct(null);
+    setExchangeQuantity("");
+    setExchangeProductSearchTerm("");
+    setValidationErrors({});
+    setExchangeProductSelected(false);
+  };
+
+  const handleExchangePriceChange = (index, newPrice) => {
+    const updatedItems = [...exchangeItems];
+    const price = newPrice === '' ? 0 : parseFloat(newPrice);
+    if (!isNaN(price) || newPrice === '') {
+      updatedItems[index] = {
+        ...updatedItems[index],
+        price: price,
+        subtotal: price * updatedItems[index].quantity,
+      };
+      setExchangeItems(updatedItems);
+    }
+  };
+
+  const handleRemoveExchangeItem = (index) => {
+    setExchangeItems(exchangeItems.filter((_, i) => i !== index));
+  };
+
   const calculateTotal = () => {
     return saleItems.reduce((sum, item) => sum + item.subtotal, 0);
   };
@@ -441,6 +528,15 @@ function Sales() {
         price: item.price,
         subtotal: item.price * item.quantity,
       }))
+    );
+    setExchangeItems(
+      sale.exchangeItems?.map((item) => ({
+        productId: item.product.id,
+        productName: item.product.name,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.price * item.quantity,
+      })) || []
     );
     setTotalAmount(sale.totalAmount);
     setDiscount(sale.discount || 0);
@@ -485,6 +581,11 @@ function Sales() {
 
     const saleData = {
       items: saleItems?.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+      exchangeItems: exchangeItems?.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
         price: item.price,
@@ -648,6 +749,11 @@ function Sales() {
                 setDiscount(0);
                 setPaidAmount("");
                 setDescription("");
+                setExchangeItems([]);
+                setExchangeProductSearchTerm("");
+                setSelectedExchangeProduct(null);
+                setExchangeQuantity("");
+                setExchangeProductSelected(false);
                 setIsModalOpen(true);
               }}
               className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-3 py-2 text-sm rounded-lg hover:from-primary-700 hover:to-primary-800 shadow-sm whitespace-nowrap"
@@ -1148,6 +1254,159 @@ function Sales() {
                       Total: {formatPakistaniCurrency(calculateTotal())}
                     </div>
                   </div>
+                </div>
+
+                {/* Exchange Section */}
+                <div className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                  <h3 className="font-medium mb-4 text-orange-800">Exchange</h3>
+                  
+                  {/* Exchange Product Search */}
+                  <div className="space-y-4 mb-4">
+                    <div className="flex flex-col gap-4">
+                      <div className="flex-1">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={exchangeProductSearchTerm}
+                            onChange={(e) => {
+                              setExchangeProductSearchTerm(e.target.value);
+                              setExchangeProductSelected(false);
+                              setSelectedExchangeProduct(null);
+                            }}
+                            placeholder="Search exchange products..."
+                            className="w-full px-3 py-2 border border-orange-200 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                          {!exchangeProductSelected &&
+                            exchangeProductSearchTerm &&
+                            filteredProducts.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-white border border-orange-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                                {filteredProducts?.map((product) => (
+                                  <div
+                                    key={product.id}
+                                    onClick={() => {
+                                      setSelectedExchangeProduct(product);
+                                      setExchangeProductSearchTerm(product.name);
+                                      setExchangeProductSelected(true);
+                                      setValidationErrors({
+                                        ...validationErrors,
+                                        exchangeProduct: undefined,
+                                      });
+                                    }}
+                                    className="px-4 py-2 cursor-pointer hover:bg-orange-50 flex justify-between items-center"
+                                  >
+                                    <div>
+                                      <div className="font-medium">
+                                        {product.name}
+                                      </div>
+                                      <div className="text-sm text-gray-600">
+                                        {product.quantity} in stock
+                                      </div>
+                                    </div>
+                                    <div className="text-orange-600 font-medium">
+                                      Rs.{product.price}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                        </div>
+                        {validationErrors.exchangeProduct && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {validationErrors.exchangeProduct}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-4">
+                        <input
+                          type="number"
+                          value={exchangeQuantity}
+                          onChange={(e) => setExchangeQuantity(e.target.value)}
+                          placeholder="Qty"
+                          className="w-24 rounded-md border-orange-200 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddExchangeItem}
+                          className="px-4 py-2 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200"
+                        >
+                          Add
+                        </button>
+                      </div>
+                      {validationErrors.exchangeQuantity && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {validationErrors.exchangeQuantity}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Exchange Items List */}
+                  {exchangeItems.length === 0 ? (
+                    <p className="text-gray-500 text-sm italic">
+                      No exchange items added yet
+                    </p>
+                  ) : (
+                    exchangeItems?.map((item, index) => (
+                      <div
+                        key={index}
+                        className="py-2 border-b border-orange-100 last:border-b-0"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-medium text-orange-700">
+                            {item.productName}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveExchangeItem(index)}
+                            className="text-red-600 hover:text-red-900 text-sm"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 items-center text-sm">
+                          <div>
+                            <label className="text-xs text-gray-500">Qty</label>
+                            <div className="font-medium">{item.quantity}</div>
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">
+                              Price
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={item.price === 0 ? '' : item.price}
+                              onChange={(e) =>
+                                handleExchangePriceChange(index, e.target.value)
+                              }
+                              placeholder="0.00"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500">
+                              Subtotal
+                            </label>
+                            <div className="font-medium text-orange-800">
+                              {formatPakistaniCurrency(item.subtotal)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  
+                  {exchangeItems.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-orange-200">
+                      <div className="font-medium text-orange-800">
+                        Exchange Total: {formatPakistaniCurrency(exchangeItems.reduce((sum, item) => sum + item.subtotal, 0))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Exchange items will appear on the bill but won't affect the total amount
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Sale Date */}

@@ -519,6 +519,58 @@ function SaleDetailsModal({ sale, isOpen, onClose }) {
             </div>
           </div>
 
+          {/* Exchange Items Section */}
+          {sale.exchangeItems && sale.exchangeItems.length > 0 && (
+            <div>
+              <h3 className="text-lg font-medium mb-2 text-orange-800">Exchange Items</h3>
+              <div className="bg-orange-50 rounded-lg overflow-hidden overflow-x-auto border border-orange-200">
+                <table className="min-w-full divide-y divide-orange-200">
+                  <thead className="bg-orange-100">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-orange-700 uppercase">Item</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-orange-700 uppercase">Quantity</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-orange-700 uppercase">Price</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-orange-700 uppercase">Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-orange-200">
+                    {sale.exchangeItems.map((item, index) => (
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-800">
+                          {item.product?.name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          {item.quantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          Rs.{item.price.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                          Rs.{(item.price * item.quantity).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-orange-50">
+                    <tr>
+                      <td colSpan="3" className="px-6 py-4 text-right font-medium text-orange-800">
+                        Exchange Total
+                      </td>
+                      <td className="px-6 py-4 text-right font-medium text-orange-800">
+                        Rs.{sale.exchangeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan="4" className="px-6 py-2 text-center text-xs text-gray-500 italic">
+                        Exchange items do not affect the sale total
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Returned Items Section */}
           {sale.returns?.length > 0 && (
             <div>
