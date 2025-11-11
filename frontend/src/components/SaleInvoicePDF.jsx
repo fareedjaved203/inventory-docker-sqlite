@@ -302,7 +302,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
   useEffect(() => {
     const generateUrduImage = async () => {
       try {
-        const imageData = await urduTextToImage('استعمال کے بعد سامان واپس یا تبدیل نہیں ہوگا۔\nالیکٹرک سامان کی کوئی گارنٹی نہیں ہے۔', 20, 400);
+        const imageData = await urduTextToImage('استعمال کے بعد سامان واپس یا تبدیل نہیں ہوگا۔\nالیکٹرک سامان کی کوئی گارنٹی نہیں ہے۔', 60, 1500);
         setUrduImage(imageData);
       } catch (error) {
         console.error('Error generating Urdu image:', error);
@@ -371,18 +371,27 @@ function SaleInvoicePDF({ sale, shopSettings }) {
             </View>
           </View>
           <View style={styles.infoRow}>
-            {sale.contact && (
+            {sale.contact ? (
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <View style={{ flexDirection: 'row' }}>
+                  <Text style={styles.label}>Contact:</Text>
+                  <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#000000', flex: 1 }}>
+                    {sale.contact.name}{sale.contact.phoneNumber ? ` (${sale.contact.phoneNumber})` : ""}
+                  </Text>
+                </View>
+              </View>
+            ) : (
               <View style={styles.infoItem}>
-                <Text style={styles.label}>Contact:</Text>
-                <Text style={styles.value}>
-                  {sale.contact.name}{sale.contact.phoneNumber ? ` (${sale.contact.phoneNumber})` : ""}
-                </Text>
+                <Text style={styles.label}>Status:</Text>
+                <Text style={{ fontSize: 6, color: '#000000', fontWeight: 'bold' }}>{status}</Text>
               </View>
             )}
-            <View style={styles.infoItem}>
-              <Text style={styles.label}>Status:</Text>
-              <Text style={[styles.statusTag, statusStyle]}>{status}</Text>
-            </View>
+            {sale.contact && (
+              <View style={styles.infoItem}>
+                <Text style={styles.label}>Status:</Text>
+                <Text style={{ fontSize: 6, color: '#000000', fontWeight: 'bold' }}>{status}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -421,12 +430,8 @@ function SaleInvoicePDF({ sale, shopSettings }) {
               <View key={index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                 <Text style={styles.col1}>{item.product.name}</Text>
                 <Text style={styles.col2}>{item.quantity}</Text>
-                <Text style={styles.col3}>
-                  Rs.{formatPakistaniCurrencyPDF(item.price, false)}
-                </Text>
-                <Text style={styles.col4}>
-                  Rs.{formatPakistaniCurrencyPDF(item.price * item.quantity, false)}
-                </Text>
+                <Text style={styles.col3}>-</Text>
+                <Text style={styles.col4}>-</Text>
               </View>
             ))}
           </View>
@@ -552,11 +557,11 @@ function SaleInvoicePDF({ sale, shopSettings }) {
         </View>
         <View style={styles.footer}>
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 4 }}>
-            <View style={{ border: '2px solid #000000', padding: 6, backgroundColor: '#ffffff' }}>
+            <View style={{ border: '2px solid #000000', width: '100%', padding: 6, backgroundColor: '#ffffff' }}>
               {urduImage && (
                 <Image 
                   src={urduImage} 
-                  style={{ width: '100%', height: 20, marginBottom: 2 }}
+                  style={{ width: '100%', height: 80, marginBottom: 2 }}
                 />
               )}
               <Text style={[styles.contactInfo, { textAlign: 'center', fontWeight: 'bold' }]}>
@@ -565,7 +570,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
             </View>
           </View>
           <View style={{ borderTop: '1px solid #000000', paddingTop: 3 }}>
-            <Text style={{ fontSize: 5, textAlign: 'center', color: '#000000', fontWeight: 'bold' }}>
+            <Text style={{ fontSize: 9, textAlign: 'center', color: '#000000', fontWeight: 'bold' }}>
               NEED SYSTEM LIKE THIS? CONTACT 03145292649
             </Text>
           </View>

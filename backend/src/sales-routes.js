@@ -66,20 +66,22 @@ export function setupSalesRoutes(app, prisma) {
     async (req, res) => {
       try {
         const sale = await prisma.$transaction(async (prisma) => {
-          let billNumber;
-          let isUnique = false;
+          const allSales = await prisma.sale.findMany({
+            select: { billNumber: true },
+            orderBy: { billNumber: 'desc' }
+          });
           
-          while (!isUnique) {
-            billNumber = Math.floor(1000000 + Math.random() * 9000000).toString();
-            
-            const existingSale = await prisma.sale.findUnique({
-              where: { billNumber }
-            });
-            
-            if (!existingSale) {
-              isUnique = true;
+          // Find the highest sequential number (ignore old 7-digit random numbers)
+          let lastNumber = 0;
+          for (const sale of allSales) {
+            const num = parseInt(sale.billNumber);
+            if (!isNaN(num) && num < 1000000) {
+              lastNumber = num;
+              break;
             }
           }
+          
+          const billNumber = (lastNumber + 1).toString();
 
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : getCurrentPakistanTime();
           console.log("to create sale: ",req.body)
@@ -165,6 +167,20 @@ export function setupSalesRoutes(app, prisma) {
                 }
               }
             });
+          }
+
+          // Deduct stock for exchange items
+          if (req.body.exchangeItems && req.body.exchangeItems.length > 0) {
+            for (const item of req.body.exchangeItems) {
+              await prisma.product.update({
+                where: { id: item.productId },
+                data: {
+                  quantity: {
+                    decrement: item.quantity
+                  }
+                }
+              });
+            }
           }
 
           // Update contact remainingAmount if provided

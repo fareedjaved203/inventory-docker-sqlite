@@ -14,7 +14,19 @@ A complete inventory management system with SQLite database, containerized in a 
 
 ## Running the Application
 
-### Using Docker Compose
+### Development Mode (with hot reloading)
+
+```bash
+docker-compose -f docker-compose.dev.yml up
+```
+
+The application will be available at:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+
+Changes to code will automatically reload without rebuilding.
+
+### Production Mode
 
 ```bash
 docker-compose up --build

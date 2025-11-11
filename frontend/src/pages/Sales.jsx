@@ -70,9 +70,14 @@ function Sales() {
   const [description, setDescription] = useState("");
   const [exchangeItems, setExchangeItems] = useState([]);
   const [exchangeProductSearchTerm, setExchangeProductSearchTerm] = useState("");
+  const [debouncedExchangeProductSearchTerm, setDebouncedExchangeProductSearchTerm] = useState("");
   const [selectedExchangeProduct, setSelectedExchangeProduct] = useState(null);
   const [exchangeQuantity, setExchangeQuantity] = useState("");
   const [exchangeProductSelected, setExchangeProductSelected] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [filteredExchangeProducts, setFilteredExchangeProducts] = useState([]);
+  const [tempStockUpdates, setTempStockUpdates] = useState({});
 
   const updateSale = useMutation(
     async (updatedSale) => {
@@ -147,6 +152,19 @@ function Sales() {
     debouncedContactSearch(value);
   };
 
+  // Debounced exchange product search
+  const debouncedExchangeProductSearch = useCallback(
+    debounce((term) => {
+      setDebouncedExchangeProductSearchTerm(term);
+    }, 300),
+    []
+  );
+
+  const handleExchangeProductSearchChange = (value) => {
+    setExchangeProductSearchTerm(value);
+    debouncedExchangeProductSearch(value);
+  };
+
   // Fetch products for dropdown with search
   const { data: products } = useQuery(
     ["products", debouncedProductSearchTerm],
@@ -172,6 +190,23 @@ function Sales() {
         `${import.meta.env.VITE_API_URL}/api/contacts?limit=100${searchParam}`
       );
       return response.data.items;
+    }
+  );
+
+  // Fetch products for exchange dropdown with search
+  const { data: exchangeProducts } = useQuery(
+    ["exchangeProducts", debouncedExchangeProductSearchTerm, tempStockUpdates],
+    async () => {
+      const searchParam = debouncedExchangeProductSearchTerm
+        ? `&search=${debouncedExchangeProductSearchTerm}`
+        : "";
+      const response = await axios.get(
+        `${import.meta.env.VITE_API_URL}/api/products?limit=100${searchParam}`
+      );
+      return response.data.items;
+    },
+    {
+      enabled: !!debouncedExchangeProductSearchTerm
     }
   );
 
@@ -292,10 +327,6 @@ function Sales() {
     }
   );
 
-  const [productSearchTerm, setProductSearchTerm] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [tempStockUpdates, setTempStockUpdates] = useState({});
-
   useEffect(() => {
     if (products) {
       setFilteredProducts(
@@ -306,6 +337,17 @@ function Sales() {
       );
     }
   }, [products, tempStockUpdates]);
+
+  useEffect(() => {
+    if (exchangeProducts) {
+      setFilteredExchangeProducts(
+        exchangeProducts.map((product) => ({
+          ...product,
+          quantity: product.quantity - (tempStockUpdates[product.id] || 0),
+        }))
+      );
+    }
+  }, [exchangeProducts, tempStockUpdates]);
 
   const handleAddItem = () => {
     if (!selectedProduct || !quantity) {
@@ -471,6 +513,12 @@ function Sales() {
       setExchangeItems([...exchangeItems, newItem]);
     }
 
+    // Update temporary stock for exchange items
+    setTempStockUpdates((prev) => ({
+      ...prev,
+      [selectedExchangeProduct.id]: (prev[selectedExchangeProduct.id] || 0) + quantityNum,
+    }));
+
     setSelectedExchangeProduct(null);
     setExchangeQuantity("");
     setExchangeProductSearchTerm("");
@@ -492,7 +540,23 @@ function Sales() {
   };
 
   const handleRemoveExchangeItem = (index) => {
+    const removedItem = exchangeItems[index];
     setExchangeItems(exchangeItems.filter((_, i) => i !== index));
+
+    // Restore temporary stock for exchange items
+    setTempStockUpdates((prev) => {
+      const newUpdates = { ...prev };
+      const currentReduction = newUpdates[removedItem.productId] || 0;
+      const newReduction = currentReduction - removedItem.quantity;
+
+      if (newReduction <= 0) {
+        delete newUpdates[removedItem.productId];
+      } else {
+        newUpdates[removedItem.productId] = newReduction;
+      }
+
+      return newUpdates;
+    });
   };
 
   const calculateTotal = () => {
@@ -1269,7 +1333,7 @@ function Sales() {
                             type="text"
                             value={exchangeProductSearchTerm}
                             onChange={(e) => {
-                              setExchangeProductSearchTerm(e.target.value);
+                              handleExchangeProductSearchChange(e.target.value);
                               setExchangeProductSelected(false);
                               setSelectedExchangeProduct(null);
                             }}
@@ -1278,9 +1342,9 @@ function Sales() {
                           />
                           {!exchangeProductSelected &&
                             exchangeProductSearchTerm &&
-                            filteredProducts.length > 0 && (
+                            filteredExchangeProducts && filteredExchangeProducts.length > 0 && (
                               <div className="absolute z-10 w-full mt-1 bg-white border border-orange-200 rounded-md shadow-lg max-h-60 overflow-auto">
-                                {filteredProducts?.map((product) => (
+                                {filteredExchangeProducts?.map((product) => (
                                   <div
                                     key={product.id}
                                     onClick={() => {
