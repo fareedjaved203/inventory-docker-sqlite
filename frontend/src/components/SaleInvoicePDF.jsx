@@ -371,27 +371,30 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           </View>
           <View style={styles.infoRow}>
             {sale.contact ? (
-              <View style={{ flex: 1, marginRight: 8 }}>
-                <View style={{ flexDirection: 'row' }}>
-                  <Text style={styles.label}>Contact:</Text>
-                  <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#000000', flex: 1 }}>
-                    {sale.contact.name}{sale.contact.phoneNumber ? ` (${sale.contact.phoneNumber})` : ""}
-                  </Text>
-                </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.label}>Phone:</Text>
+                <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#000000', flex: 1 }}>
+                  {sale.contact.phoneNumber == "0" ? "-" : sale.contact.phoneNumber}
+                </Text>
               </View>
             ) : (
-              <View style={styles.infoItem}>
-                <Text style={styles.label}>Status:</Text>
-                <Text style={{ fontSize: 6, color: '#000000', fontWeight: 'bold' }}>{status}</Text>
-              </View>
+              <View style={{ flex: 1, marginRight: 8 }} />
             )}
-            {sale.contact && (
-              <View style={styles.infoItem}>
-                <Text style={styles.label}>Status:</Text>
-                <Text style={{ fontSize: 6, color: '#000000', fontWeight: 'bold' }}>{status}</Text>
-              </View>
-            )}
+            <View style={styles.infoItem}>
+              <Text style={styles.label}>Status:</Text>
+              <Text style={{ fontSize: 6, color: '#000000', fontWeight: 'bold' }}>{status}</Text>
+            </View>
           </View>
+          {sale.contact && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoItem}>
+                <Text style={styles.label}>Name:</Text>
+                <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#000000', flex: 1 }}>
+                  {sale.contact.name}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.table}>
