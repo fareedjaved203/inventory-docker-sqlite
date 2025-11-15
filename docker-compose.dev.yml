@@ -12,7 +12,7 @@ services:
     volumes:
       - ./backend:/app
       - backend_node_modules:/app/node_modules
-      - inventory_data:/app/prisma/data
+      - ./data:/app/prisma/data
     restart: unless-stopped
 
   frontend:

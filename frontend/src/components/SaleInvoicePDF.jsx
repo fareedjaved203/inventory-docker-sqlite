@@ -76,8 +76,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     fontFamily: 'Helvetica',
     flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: '100vh',
+    minHeight: '100%',
   },
   header: {
     marginBottom: 3,
@@ -215,14 +214,14 @@ const styles = StyleSheet.create({
     color: '#000000',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
   },
   footer: {
-    marginTop: 'auto',
     fontSize: 5,
     color: '#000000',
     borderTop: '2px solid #000000',
     paddingTop: 6,
+    marginTop: 8,
   },
   contactInfo: {
     fontSize: 6,
@@ -302,7 +301,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
   useEffect(() => {
     const generateUrduImage = async () => {
       try {
-        const imageData = await urduTextToImage('استعمال کے بعد سامان واپس یا تبدیل نہیں ہوگا۔\nالیکٹرک سامان کی کوئی گارنٹی نہیں ہے۔', 60, 1500);
+        const imageData = await urduTextToImage('استعمال کے بعد سامان واپس یا تبدیل نہیں ہوگا۔\nالیکٹرک سامان کی کوئی گارنٹی نہیں ہے۔', 10, 200);
         setUrduImage(imageData);
       } catch (error) {
         console.error('Error generating Urdu image:', error);
@@ -555,13 +554,13 @@ function SaleInvoicePDF({ sale, shopSettings }) {
         )}
 
         </View>
-        <View style={styles.footer}>
+        <View style={styles.footer} wrap={false}>
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 4 }}>
-            <View style={{ border: '2px solid #000000', width: '100%', padding: 6, backgroundColor: '#ffffff' }}>
+            <View style={{ border: '2px solid #000000', width: '100%', padding: 6, backgroundColor: '#ffffff', height: 70 }}>
               {urduImage && (
                 <Image 
                   src={urduImage} 
-                  style={{ width: '100%', height: 80, marginBottom: 2 }}
+                  style={{ width: '100%', height: 50, marginBottom: 2, objectFit: 'contain' }}
                 />
               )}
               <Text style={[styles.contactInfo, { textAlign: 'center', fontWeight: 'bold' }]}>

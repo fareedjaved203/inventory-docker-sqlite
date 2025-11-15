@@ -189,3 +189,8 @@ model ShopSettings {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+model Counter {
+  id    String @id
+  value Int
+}

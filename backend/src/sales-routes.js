@@ -66,22 +66,34 @@ export function setupSalesRoutes(app, prisma) {
     async (req, res) => {
       try {
         const sale = await prisma.$transaction(async (prisma) => {
-          const allSales = await prisma.sale.findMany({
-            select: { billNumber: true },
-            orderBy: { billNumber: 'desc' }
-          });
+          // Atomic counter increment
+          let counter = await prisma.counter.findUnique({ where: { id: 'billNumber' } });
           
-          // Find the highest sequential number (ignore old 7-digit random numbers)
-          let lastNumber = 0;
-          for (const sale of allSales) {
-            const num = parseInt(sale.billNumber);
-            if (!isNaN(num) && num < 1000000) {
-              lastNumber = num;
-              break;
+          if (!counter) {
+            // Initialize counter from existing sales
+            const lastSale = await prisma.sale.findFirst({
+              where: { billNumber: { not: { contains: '-' } } },
+              orderBy: { createdAt: 'desc' },
+              select: { billNumber: true }
+            });
+            
+            let lastNumber = 0;
+            if (lastSale) {
+              const num = parseInt(lastSale.billNumber);
+              if (!isNaN(num) && num < 1000000) lastNumber = num;
             }
+            
+            counter = await prisma.counter.create({
+              data: { id: 'billNumber', value: lastNumber }
+            });
           }
           
-          const billNumber = (lastNumber + 1).toString();
+          const updated = await prisma.counter.update({
+            where: { id: 'billNumber' },
+            data: { value: { increment: 1 } }
+          });
+          
+          const billNumber = updated.value.toString();
 
           const saleDate = req.body.saleDate ? createPakistanDate(req.body.saleDate) : getCurrentPakistanTime();
           console.log("to create sale: ",req.body)
