@@ -493,6 +493,11 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
         </View>
 
+        <View style={styles.total}>
+          <Text style={styles.totalLabel}>Paid Amount:</Text>
+          <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.paidAmount || 0)}</Text>
+        </View>
+
         {sale.returns && sale.returns.length > 0 && (
           <View>
             <View style={styles.total}>
