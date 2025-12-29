@@ -493,10 +493,19 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.totalAmount)}</Text>
         </View>
 
-        <View style={styles.total}>
-          <Text style={styles.totalLabel}>Paid Amount:</Text>
-          <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.paidAmount || 0)}</Text>
-        </View>
+        {(sale.paidAmount || 0) > 0 && (
+          <>
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>Paid Amount:</Text>
+              <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.paidAmount || 0)}</Text>
+            </View>
+
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>Remaining Amount:</Text>
+              <Text style={{ fontSize: 9 }}>{formatPakistaniCurrencyPDF(sale.totalAmount - (sale.paidAmount || 0))}</Text>
+            </View>
+          </>
+        )}
 
         {sale.returns && sale.returns.length > 0 && (
           <View>
@@ -542,7 +551,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
 
 
         {/* Previous Outstanding Amount */}
-        {sale.contact && (sale.contact.remainingAmount || 0) > 0 && (
+        {sale.contact && (
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Previous Remaining Amount:</Text>
             <Text style={{ fontSize: 9 }}>
@@ -556,7 +565,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
           <View style={[styles.total, { borderTop: '1px solid #000', paddingTop: 8, marginTop: 8 }]}>
             <Text style={[styles.totalLabel, { fontWeight: 'bold' }]}>Overall Total:</Text>
             <Text style={{ fontWeight: 'bold', fontSize: 9 }}>
-              Rs.{formatPakistaniCurrencyPDF((sale.totalAmount || 0) + (sale.contact.remainingAmount || 0), false)}
+              Rs.{formatPakistaniCurrencyPDF((sale.totalAmount - (sale.paidAmount || 0)) + (sale.contact.remainingAmount || 0), false)}
             </Text>
           </View>
         )}
