@@ -551,7 +551,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
 
 
         {/* Previous Outstanding Amount */}
-        {sale.contact && (
+        {sale.contact && sale.contact.remainingAmount > 0 && (
           <View style={styles.total}>
             <Text style={styles.totalLabel}>Previous Remaining Amount:</Text>
             <Text style={{ fontSize: 9 }}>
@@ -561,7 +561,7 @@ function SaleInvoicePDF({ sale, shopSettings }) {
         )}
 
         {/* Overall Total */}
-        {sale.contact && (sale.contact.remainingAmount || 0) > 0 && (
+        {sale.contact && sale.contact.remainingAmount > 0 && (
           <View style={[styles.total, { borderTop: '1px solid #000', paddingTop: 8, marginTop: 8 }]}>
             <Text style={[styles.totalLabel, { fontWeight: 'bold' }]}>Overall Total:</Text>
             <Text style={{ fontWeight: 'bold', fontSize: 9 }}>
